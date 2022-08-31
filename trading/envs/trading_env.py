@@ -14,19 +14,15 @@ class TradingEnv(gym.Env):
         super(TradingEnv, self).__init__()
 
         self.filename = filename
-        self.csvreader = csv.reader(open(self.filename, newline=''), delimiter=',', quotechar='|')
-        # header
-        next(self.csvreader)
 
-        # 1, 0, s-1 for long, neutral, short
-        self.action_space = spaces.Discrete(3, start=-1)
-
+        # 0, 1, 2 translates to 1, 0, s-1 for long, neutral, short
+        self.action_space = spaces.Discrete(3)
         # minDrop,maxJump,changePT60H,rsiPT30M
         self.observation_space = spaces.Box(low=-1.0, high=1.0, shape=(4,), dtype=np.uint8)
 
+        self.entry = None
         self.prev_action = 0
-        # first row
-        self.entry = next(self.csvreader)
+        self.prev_market_symbol = ''
         self.balance = INITIAL_BALANCE
         self.reset()
 
@@ -48,14 +44,25 @@ class TradingEnv(gym.Env):
 
     def _next_entry(self):
         try:
-            return next(self.csvreader)
+            entry = next(self.csvreader)
+            if entry is not None and entry[0] == 'epochSeconds':
+                entry = next(self.csvreader)
+            return entry
         except StopIteration:
             return None
 
     def step(self, action):
+        # new market/symbol, reset the position
+        market, symbol = self.entry[1], self.entry[2]
+        if market + symbol != self.prev_market_symbol:
+            print('market symbol change to {n} from {p}'.format(n=market+symbol, p=self.prev_market_symbol))
+            self.prev_action = 0
+        self.prev_market_symbol = market + symbol
+
         # the reward for the current action is decided in the next step
         step_change = float(self.entry[3])
-        reward = step_change * self.prev_action
+        # action 0 to 2 translates to -1 to 1
+        reward = step_change * (self.prev_action - 1) 
         self.prev_action = action
         self.balance += self.balance * BET_AMPLITUDE * reward
 
@@ -69,9 +76,10 @@ class TradingEnv(gym.Env):
         next(self.csvreader)
         # first row
         entry = next(self.csvreader)
-        # reserve the second row
         self.entry = next(self.csvreader)
+        # reserve the second row
         self.prev_action = 0
+        self.prev_market_symbol = ''
         self.balance = INITIAL_BALANCE
 
         return self._observation(entry)

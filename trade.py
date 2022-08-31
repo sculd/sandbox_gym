@@ -13,7 +13,7 @@ from rl.memory import SequentialMemory
 
 from trading.envs.trading_env import TradingEnv
 
-filename = 'market_data_binance.by_minute_DGBUSDT-mldata.csv'
+filename = 'data.csv'
 env = TradingEnv(filename)
 
 
@@ -56,11 +56,10 @@ model.add(Dense(16))
 model.add(Activation('relu'))
 model.add(Dense(16))
 model.add(Activation('relu'))
-model.add(Dense(16))
-model.add(Activation('relu'))
 model.add(Dense(env.action_space.n))
 model.add(Activation('linear'))
 print(model.summary())
+input("Press Enter to continue...")
 
 # Finally, we configure and compile our agent. You can use every built-in Keras optimizer and
 # even the metrics!
