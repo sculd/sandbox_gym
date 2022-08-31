@@ -18,7 +18,7 @@ class TradingEnv(gym.Env):
         # header
         next(self.csvreader)
 
-        # 1, 0, -1 for long, neutral, short
+        # 1, 0, s-1 for long, neutral, short
         self.action_space = spaces.Discrete(3)
 
         # minDrop,maxJump,changePT60H,rsiPT30M
@@ -34,7 +34,7 @@ class TradingEnv(gym.Env):
         step_change = float(entry[3])
         return step_change * self.prev_action
 
-    def _next_observation(self, entry):
+    def _observation(self, entry):
         min_drop, max_jump, change_6h, rsi_30m = \
             float(entry[4]), float(entry[5]), float(entry[7]), float(entry[8])
         return np.array([
@@ -58,7 +58,7 @@ class TradingEnv(gym.Env):
         reward = step_change * self.prev_action
         self.balance += self.balance * BET_AMPLITUDE * reward
 
-        obs = self._next_observation(self.entry)
+        obs = self._observation(self.entry)
         self.entry = self._next_entry()
         return obs, reward, self.entry is None, self._info()
 
@@ -67,9 +67,13 @@ class TradingEnv(gym.Env):
         # header
         next(self.csvreader)
         # first row
+        entry = next(self.csvreader)
+        # reserve the second row
         self.entry = next(self.csvreader)
         self.prev_action = 0
         self.balance = INITIAL_BALANCE
+
+        return self._observation(entry)
 
     def render(self, mode='human', close=False):
         # Render the environment to the screen
