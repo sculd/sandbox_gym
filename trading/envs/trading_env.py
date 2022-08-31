@@ -67,7 +67,7 @@ class TradingEnv(gym.Env):
         # the reward for the current action is decided in the next step
         step_change = float(self.entry[3])
         # action 0 to 2 translates to -1 to 1
-        reward = step_change * (self.prev_action - 1) 
+        reward = self._reward(self.entry)
         if action != self.prev_action:
             #print('position changed from {p} to {a} at {entry}'.format(p=self.prev_action, a=action, entry=self.entry))
             self.num_position_change += 1
