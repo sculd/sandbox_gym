@@ -56,6 +56,7 @@ class TradingEnv(gym.Env):
         # the reward for the current action is decided in the next step
         step_change = float(self.entry[3])
         reward = step_change * self.prev_action
+        self.prev_action = action
         self.balance += self.balance * BET_AMPLITUDE * reward
 
         obs = self._observation(self.entry)
