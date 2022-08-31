@@ -5,7 +5,8 @@ import csv
 
 INITIAL_BALANCE = 1000
 BET_AMPLITUDE = 0.1
-
+TRADING_FRICTION = 0.004
+ACTION_VALUE_NEUTRAL_POSITION = 1
 
 class TradingEnv(gym.Env):
     metadata = {'render.modes': ['human']}
@@ -20,15 +21,18 @@ class TradingEnv(gym.Env):
         # minDrop,maxJump,changePT60H,rsiPT30M
         self.observation_space = spaces.Box(low=-1.0, high=1.0, shape=(4,), dtype=np.uint8)
 
+        self.num_position_change = 0
         self.entry = None
-        self.prev_action = 0
+        self.prev_action = ACTION_VALUE_NEUTRAL_POSITION
+        self.prev_action_2 = ACTION_VALUE_NEUTRAL_POSITION
         self.prev_market_symbol = ''
         self.balance = INITIAL_BALANCE
         self.reset()
 
     def _reward(self, entry):
         step_change = float(entry[3])
-        return step_change * self.prev_action
+        action_amplitude = abs(self.prev_action - self.prev_action_2)
+        return step_change * self.prev_action - action_amplitude * TRADING_FRICTION
 
     def _observation(self, entry):
         min_drop, max_jump, change_6h, rsi_30m = \
@@ -56,14 +60,19 @@ class TradingEnv(gym.Env):
         market, symbol = self.entry[1], self.entry[2]
         if market + symbol != self.prev_market_symbol:
             print('market symbol change to {n} from {p}'.format(n=market+symbol, p=self.prev_market_symbol))
-            self.prev_action = 0
+            self.prev_action = ACTION_VALUE_NEUTRAL_POSITION
+            self.prev_action_2 = ACTION_VALUE_NEUTRAL_POSITION
         self.prev_market_symbol = market + symbol
 
         # the reward for the current action is decided in the next step
         step_change = float(self.entry[3])
         # action 0 to 2 translates to -1 to 1
         reward = step_change * (self.prev_action - 1) 
-        self.prev_action = action
+        if action != self.prev_action:
+            #print('position changed from {p} to {a} at {entry}'.format(p=self.prev_action, a=action, entry=self.entry))
+            self.num_position_change += 1
+            pass
+        self.prev_action_2, self.prev_action = self.prev_action, action
         self.balance += self.balance * BET_AMPLITUDE * reward
 
         obs = self._observation(self.entry)
@@ -76,9 +85,12 @@ class TradingEnv(gym.Env):
         next(self.csvreader)
         # first row
         entry = next(self.csvreader)
+        print('num_position_change: {v}'.format(v=self.num_position_change))
+        self.num_position_change = 0
         self.entry = next(self.csvreader)
         # reserve the second row
-        self.prev_action = 0
+        self.prev_action = ACTION_VALUE_NEUTRAL_POSITION
+        self.prev_action_2 = ACTION_VALUE_NEUTRAL_POSITION
         self.prev_market_symbol = ''
         self.balance = INITIAL_BALANCE
 
