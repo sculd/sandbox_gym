@@ -32,7 +32,7 @@ class TradingEnv(gym.Env):
     def _reward(self, entry):
         step_change = float(entry[3])
         action_amplitude = abs(self.prev_action - self.prev_action_2)
-        return step_change * self.prev_action - action_amplitude * TRADING_FRICTION
+        return step_change * (self.prev_action - 1) - action_amplitude * TRADING_FRICTION
 
     def _observation(self, entry):
         min_drop, max_jump, change_6h, rsi_30m = \
