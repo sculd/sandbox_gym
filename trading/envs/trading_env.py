@@ -19,7 +19,7 @@ class TradingEnv(gym.Env):
         next(self.csvreader)
 
         # 1, 0, s-1 for long, neutral, short
-        self.action_space = spaces.Discrete(3)
+        self.action_space = spaces.Discrete(3, start=-1)
 
         # minDrop,maxJump,changePT60H,rsiPT30M
         self.observation_space = spaces.Box(low=-1.0, high=1.0, shape=(4,), dtype=np.uint8)
