@@ -13,7 +13,8 @@ class TradingEnv(gym.Env):
     def __init__(self, filename):
         super(TradingEnv, self).__init__()
 
-        self.csvreader = csv.reader(open(filename, newline=''), delimiter=',', quotechar='|')
+        self.filename = filename
+        self.csvreader = csv.reader(open(self.filename, newline=''), delimiter=',', quotechar='|')
         # header
         next(self.csvreader)
 
@@ -24,6 +25,8 @@ class TradingEnv(gym.Env):
         self.observation_space = spaces.Box(low=-1.0, high=1.0, shape=(4,), dtype=np.uint8)
 
         self.prev_action = 0
+        # first row
+        self.entry = next(self.csvreader)
         self.balance = INITIAL_BALANCE
         self.reset()
 
@@ -43,20 +46,28 @@ class TradingEnv(gym.Env):
             'balance': self.balance
         }
 
-    def step(self, action):
+    def _next_entry(self):
         try:
-            entry = next(self.csvreader)
+            return next(self.csvreader)
         except StopIteration:
-            return None, 0, True, {}
+            return None
 
-        step_change = float(entry[3])
+    def step(self, action):
+        # the reward for the current action is decided in the next step
+        step_change = float(self.entry[3])
         reward = step_change * self.prev_action
         self.balance += self.balance * BET_AMPLITUDE * reward
-        done = False
 
-        return self._next_observation(entry), reward, done, self._info()
+        obs = self._next_observation(self.entry)
+        self.entry = self._next_entry()
+        return obs, reward, self.entry is None, self._info()
 
     def reset(self, **kwargs):
+        self.csvreader = csv.reader(open(self.filename, newline=''), delimiter=',', quotechar='|')
+        # header
+        next(self.csvreader)
+        # first row
+        self.entry = next(self.csvreader)
         self.prev_action = 0
         self.balance = INITIAL_BALANCE
 
