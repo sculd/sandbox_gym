@@ -19,26 +19,25 @@ class TradingEnv(gym.Env):
         # 0, 1, 2 translates to 1, 0, s-1 for long, neutral, short
         self.action_space = spaces.Discrete(3)
         # minDrop,maxJump,changePT60H,rsiPT30M
-        self.observation_space = spaces.Box(low=-1.0, high=1.0, shape=(4,), dtype=np.uint8)
+        self.observation_space = spaces.Box(low=-1.0, high=1.0, shape=(3,), dtype=np.uint8)
 
         self.num_position_change = 0
         self.entry = None
         self.prev_action = ACTION_VALUE_NEUTRAL_POSITION
-        self.prev_action_2 = ACTION_VALUE_NEUTRAL_POSITION
         self.prev_market_symbol = ''
         self.balance = INITIAL_BALANCE
         self.reset()
 
-    def _reward(self, entry):
-        step_change = float(entry[3])
-        action_amplitude = abs(self.prev_action - self.prev_action_2)
-        return step_change * (self.prev_action - 1) - action_amplitude * TRADING_FRICTION
+    def _reward(self, action):
+        step_change = float(self.entry[3])
+        action_amplitude = abs(action - self.prev_action)
+        return step_change * (action - 1) - action_amplitude * TRADING_FRICTION
 
-    def _observation(self, entry):
+    def _observation(self, action):
         min_drop, max_jump, change_6h, rsi_30m = \
-            float(entry[4]), float(entry[5]), float(entry[7]), float(entry[8])
+            float(self.entry[4]), float(self.entry[5]), float(self.entry[7]), float(self.entry[8])
         return np.array([
-            min_drop, max_jump, change_6h, rsi_30m
+            action - 1, min_drop, max_jump #, change_6h, rsi_30m
         ])
 
     def _info(self):
@@ -61,40 +60,36 @@ class TradingEnv(gym.Env):
         if market + symbol != self.prev_market_symbol:
             print('market symbol change to {n} from {p}'.format(n=market+symbol, p=self.prev_market_symbol))
             self.prev_action = ACTION_VALUE_NEUTRAL_POSITION
-            self.prev_action_2 = ACTION_VALUE_NEUTRAL_POSITION
         self.prev_market_symbol = market + symbol
 
-        # the reward for the current action is decided in the next step
-        step_change = float(self.entry[3])
-        # action 0 to 2 translates to -1 to 1
-        reward = self._reward(self.entry)
         if action != self.prev_action:
-            #print('position changed from {p} to {a} at {entry}'.format(p=self.prev_action, a=action, entry=self.entry))
             self.num_position_change += 1
             pass
-        self.prev_action_2, self.prev_action = self.prev_action, action
+        self.prev_action = action
+
+        # action 0 to 2 translates to -1 to 1
+        reward = self._reward(action)
         self.balance += self.balance * BET_AMPLITUDE * reward
 
-        obs = self._observation(self.entry)
+        obs = self._observation(action)
+
+        # read a row ahead to calculate reward in the next step
         self.entry = self._next_entry()
+
         return obs, reward, self.entry is None, self._info()
 
     def reset(self, **kwargs):
         self.csvreader = csv.reader(open(self.filename, newline=''), delimiter=',', quotechar='|')
-        # header
-        next(self.csvreader)
-        # first row
-        entry = next(self.csvreader)
         print('num_position_change: {v}'.format(v=self.num_position_change))
         self.num_position_change = 0
-        self.entry = next(self.csvreader)
-        # reserve the second row
         self.prev_action = ACTION_VALUE_NEUTRAL_POSITION
-        self.prev_action_2 = ACTION_VALUE_NEUTRAL_POSITION
         self.prev_market_symbol = ''
         self.balance = INITIAL_BALANCE
 
-        return self._observation(entry)
+        # the first row for the first observation
+        self.entry = self._next_entry()
+        obs = self._observation(ACTION_VALUE_NEUTRAL_POSITION)
+        return obs
 
     def render(self, mode='human', close=False):
         # Render the environment to the screen
