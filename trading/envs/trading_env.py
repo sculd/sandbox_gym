@@ -58,7 +58,7 @@ class TradingEnv(gym.Env):
         # new market/symbol, reset the position
         market, symbol = self.entry[1], self.entry[2]
         if market + symbol != self.prev_market_symbol:
-            print('market symbol change to {n} from {p}'.format(n=market+symbol, p=self.prev_market_symbol))
+            #print('market symbol change to {n} from {p}'.format(n=market+symbol, p=self.prev_market_symbol))
             self.prev_action = ACTION_VALUE_NEUTRAL_POSITION
         self.prev_market_symbol = market + symbol
 
