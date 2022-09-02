@@ -71,7 +71,7 @@ dqn = DQNAgent(model=model, nb_actions=env.action_space.n, memory=memory, nb_ste
 dqn.compile(Adam(lr=1e-3), metrics=['mae'])
 
 # You can always safely abort the training prematurely using Ctrl + C.
-dqn.fit(env, nb_steps=30000, visualize=False, verbose=2)
+dqn.fit(env, nb_steps=90000, visualize=False, verbose=2)
 
 # After training is done, we save the final weights.
 dqn.save_weights('dqn_{}_weights.h5f'.format('trading'), overwrite=True)

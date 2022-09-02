@@ -37,7 +37,7 @@ class TradingEnv(gym.Env):
         min_drop, max_jump, change_6h, rsi_30m = \
             float(self.entry[4]), float(self.entry[5]), float(self.entry[7]), float(self.entry[8])
         return np.array([
-            action - 1, min_drop, max_jump #, change_6h, rsi_30m
+            action - 1,  min_drop, max_jump #, change_6h, rsi_30m
         ])
 
     def _info(self):
