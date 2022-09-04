@@ -35,11 +35,6 @@ class TradingEnv(gym.Env):
         # minDrop,maxJump,changePT60H,rsiPT30M
         self.observation_space = spaces.Box(low=-1.0, high=1.0, shape=(3,), dtype=np.uint8)
 
-        self.num_position_change = 0
-        self.prev_action = self.action_value_neutral_position
-        self.prev_market_symbol = ''
-        self.balance = INITIAL_BALANCE
-        self.entry = None
         self.reset()
 
     def _reward(self, action):
