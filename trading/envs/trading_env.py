@@ -13,17 +13,25 @@ class TradeSideType(Enum):
     SHORT = auto()
     LONG_SHORT = auto()
 
+class TradingEnvInitParam():
+    filename = ''
+    trade_side_type = TradeSideType.LONG
+
+    def __str__(self):
+        return 'filename: {filename}, side type: {st}'.format(filename=self.filename, st=self.trade_side_type)
+
 class TradingEnv(gym.Env):
     metadata = {'render.modes': ['human']}
 
-    def __init__(self, filename, trade_side_type):
+    def __init__(self, init_param):
         super(TradingEnv, self).__init__()
 
-        self.filename = filename
-        if trade_side_type == TradeSideType.LONG:
+        print(init_param)
+        self.filename = init_param.filename
+        if init_param.trade_side_type == TradeSideType.LONG:
             self.action_value_neutral_position = 0
             space_cardinality = 2
-        elif trade_side_type == TradeSideType.SHORT:
+        elif init_param.trade_side_type == TradeSideType.SHORT:
             self.action_value_neutral_position = 1
             space_cardinality = 2
         else:
@@ -35,6 +43,7 @@ class TradingEnv(gym.Env):
         # minDrop,maxJump,changePT60H,rsiPT30M
         self.observation_space = spaces.Box(low=-1.0, high=1.0, shape=(3,), dtype=np.uint8)
 
+        self.num_position_change = 0
         self.reset()
 
     def _reward(self, action):
