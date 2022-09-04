@@ -11,10 +11,10 @@ from rl.agents.dqn import DQNAgent
 from rl.policy import BoltzmannQPolicy
 from rl.memory import SequentialMemory
 
-from trading.envs.trading_env import TradingEnv
+from trading.envs.trading_env import TradingEnv, TradeSideType
 
-filename = 'data.csv'
-env = TradingEnv(filename)
+filename = 'data_toy.csv'
+env = TradingEnv(filename, TradeSideType.LONG)
 
 
 print('Observatoin shape', env.observation_space.shape)
