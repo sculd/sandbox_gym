@@ -1,8 +1,9 @@
 import gym
 import numpy as np
 from gym import spaces
-import csv
+import csv, random
 from enum import Enum, auto
+from collections import defaultdict
 
 INITIAL_BALANCE = 1000
 BET_AMPLITUDE = 0.1
@@ -19,6 +20,39 @@ class TradingEnvInitParam():
 
     def __str__(self):
         return 'filename: {filename}, side type: {st}'.format(filename=self.filename, st=self.trade_side_type)
+
+class MarketData:
+    def __init__(self, filename):
+        filename = filename
+        csvreader = csv.reader(open(filename, newline=''), delimiter=',', quotechar='|')
+        self.market_symbol_to_entries = defaultdict(list)
+        for entry in csvreader:
+            market, symbol = entry[1], entry[2]
+            if market == 'market':
+                continue
+            self.market_symbol_to_entries[market + symbol].append(entry)
+        self.market_symbols = list(self.market_symbol_to_entries.keys())
+        self.reset(shuffle=False)
+
+    def reset(self, shuffle=True):
+        if shuffle:
+            random.shuffle(self.market_symbols)
+        self.market_symbol_i = 0
+        self.market_symbol_iter = iter(self.market_symbol_to_entries[self.market_symbols[self.market_symbol_i]])
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        while True:
+            try:
+                return next(self.market_symbol_iter)
+            except StopIteration:
+                self.market_symbol_i += 1
+                if self.market_symbol_i >= len(self.market_symbols):
+                    self.reset()
+                    raise StopIteration
+                self.market_symbol_iter = iter(self.market_symbol_to_entries[self.market_symbols[self.market_symbol_i]])
 
 class TradingEnv(gym.Env):
     metadata = {'render.modes': ['human']}
