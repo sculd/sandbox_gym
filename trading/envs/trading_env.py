@@ -21,9 +21,10 @@ class TrainTestDataType(Enum):
 class TradingEnvInitParam():
     filename = ''
     trade_side_type = TradeSideType.LONG
+    test_split = 0.4
 
     def __str__(self):
-        return 'filename: {filename}, side type: {st}'.format(filename=self.filename, st=self.trade_side_type)
+        return 'filename: {filename}, side type: {st}, train test split: {sp}'.format(filename=self.filename, st=self.trade_side_type, sp=self.test_split)
 
 class MarketData:
     def __init__(self, filename, test_split=0.4):
@@ -82,7 +83,6 @@ class TradingEnv(gym.Env):
         super(TradingEnv, self).__init__()
 
         print(init_param)
-        self.filename = init_param.filename
         if init_param.trade_side_type == TradeSideType.LONG:
             self.action_value_neutral_position = 0
             space_cardinality = 2
@@ -93,6 +93,7 @@ class TradingEnv(gym.Env):
             self.action_value_neutral_position = 1
             space_cardinality = 3
 
+        self.market_data = MarketData(filename=init_param.filename, test_split=init_param.test_split)
         # 0, 1, 2 translates to 1, 0, s-1 for long, neutral, short
         self.action_space = spaces.Discrete(space_cardinality)
         # minDrop,maxJump,changePT60H,rsiPT30M
@@ -120,10 +121,7 @@ class TradingEnv(gym.Env):
 
     def _next_entry(self):
         try:
-            entry = next(self.csvreader)
-            if entry is not None and entry[0] == 'epochSeconds':
-                entry = next(self.csvreader)
-            return entry
+            return next(self.market_data)
         except StopIteration:
             return None
 
@@ -152,7 +150,6 @@ class TradingEnv(gym.Env):
         return obs, reward, self.entry is None, self._info()
 
     def reset(self, **kwargs):
-        self.csvreader = csv.reader(open(self.filename, newline=''), delimiter=',', quotechar='|')
         if self.num_position_change > 0:
             print('num_position_change: {v}'.format(v=self.num_position_change))
 
