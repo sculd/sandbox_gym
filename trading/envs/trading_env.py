@@ -3,7 +3,7 @@ import gym
 from gym import spaces
 from enum import Enum, auto
 
-from trading.envs.train_test_data import TrainingData
+from trading.envs.train_test_data import TrainingData, TrainTestDataType
 
 DEFAULT_INITIAL_BALANCE = 1000
 DEFAULT_BET_AMPLITUDE = 0.1
