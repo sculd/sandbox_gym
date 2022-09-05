@@ -13,6 +13,9 @@ from rl.memory import SequentialMemory
 
 from trading.envs.trading_env import TradingEnv, TradeSideType, TradingEnvInitParam, TrainTestDataType
 
+import wandb
+from wandb.keras import WandbCallback
+
 filename = 'data.csv'
 init_param = TradingEnvInitParam()
 init_param.filename = filename
@@ -35,23 +38,38 @@ model.add(Activation('linear'))
 print(model.summary())
 input("Press Enter to continue...")
 
-# Finally, we configure and compile our agent. You can use every built-in Keras optimizer and
-# even the metrics!
-memory = SequentialMemory(limit=1000, window_length=1)
+
+memory_limit = 1000
+dqn_target_model_update=1e-2
+adam_lr=1e-3
+adam_metrics='mae'
+dqn_nb_steps=20000
+
+wandb.init(project="long", entity="trading-rl")
+wandb.config = {
+  "memory_limit": memory_limit,
+  "dqn_target_model_update": dqn_target_model_update,
+  "adam_lr": adam_lr,
+  "adam_metrics": adam_metrics,
+  "dqn_nb_steps": dqn_nb_steps,
+}
+
+# ... Define a model
+memory = SequentialMemory(limit=memory_limit, window_length=1)
 policy = BoltzmannQPolicy()
-dqn = DQNAgent(model=model, nb_actions=env.action_space.n, memory=memory, nb_steps_warmup=10,
-               target_model_update=1e-2, policy=policy)
-dqn.compile(Adam(lr=1e-3), metrics=['mae'])
+dqn = DQNAgent(model=model, nb_actions=env.action_space.n, memory=memory, nb_steps_warmup=10, target_model_update=dqn_target_model_update, policy=policy)
+dqn.compile(Adam(lr=adam_lr), metrics=[adam_metrics])
 
 # You can always safely abort the training prematurely using Ctrl + C.
-dqn.fit(env, nb_steps=90000, visualize=False, verbose=2)
+dqn.fit(env, nb_steps=dqn_nb_steps, visualize=False, verbose=2, callbacks=[WandbCallback()])
 
 # After training is done, we save the final weights.
 dqn.save_weights('dqn_{}_weights.h5f'.format('trading'), overwrite=True)
 
 # Finally, evaluate our algorithm for 5 episodes.
-dqn.test(env, nb_episodes=5, visualize=True)
+print("Testing with training dataset")
+dqn.test(env, nb_episodes=2, visualize=True)
 
+print("Testing with test dataset")
 env.set_train_test(TrainTestDataType.TEST)
-dqn.test(env, nb_episodes=5, visualize=True)
-#'''
+dqn.test(env, nb_episodes=2, visualize=True)

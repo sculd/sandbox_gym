@@ -1,4 +1,5 @@
 .idea/**
+wandb/**
 **/__pycache__/
 checkpoint
 **.h5f.**

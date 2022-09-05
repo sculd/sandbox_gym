@@ -1,5 +1,6 @@
-import gym
+import math
 import numpy as np
+import gym
 from gym import spaces
 from enum import Enum, auto
 
@@ -7,7 +8,8 @@ from trading.envs.train_test_data import TrainingData, TrainTestDataType
 
 INITIAL_BALANCE = 1000
 BET_AMPLITUDE = 0.1
-TRADING_FRICTION = 0.004
+TRADING_PRICE_SLIPPAGE = 0.002
+TRADING_COMMISION = 0.004
 
 class TradeSideType(Enum):
     LONG = auto()
@@ -50,8 +52,14 @@ class TradingEnv(gym.Env):
 
     def _reward(self, action):
         step_change = float(self.entry[3])
+        profit = step_change * (action - self.action_value_neutral_position)
+        # slippage causes the position to be positioned with a penalty
+        if profit >= 0:
+            profit *= 1.00 - TRADING_PRICE_SLIPPAGE
+        else:
+            profit *= 1.00 + TRADING_PRICE_SLIPPAGE
         action_amplitude = abs(action - self.prev_action)
-        return step_change * (action - self.action_value_neutral_position) - action_amplitude * TRADING_FRICTION
+        return profit - action_amplitude * TRADING_COMMISION
 
     def _observation(self, action):
         min_drop, max_jump, change_6h, rsi_30m = \
@@ -99,9 +107,7 @@ class TradingEnv(gym.Env):
         return obs, reward, self.entry is None, self._info()
 
     def reset(self, **kwargs):
-        if self.num_position_change > 0:
-            print('num_position_change: {v}'.format(v=self.num_position_change))
-
+        print('num_position_change in the prev epoch: {v}'.format(v=self.num_position_change))
         self.num_position_change = 0
         self.prev_action = self.action_value_neutral_position
         self.prev_market_symbol = ''
