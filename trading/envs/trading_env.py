@@ -9,24 +9,11 @@ INITIAL_BALANCE = 1000
 BET_AMPLITUDE = 0.1
 TRADING_FRICTION = 0.004
 
-class TradeSideType(Enum):
-    LONG = auto()
-    SHORT = auto()
-    LONG_SHORT = auto()
-
 class TrainTestDataType(Enum):
     TRAIN = auto()
     TEST = auto()
 
-class TradingEnvInitParam():
-    filename = ''
-    trade_side_type = TradeSideType.LONG
-    test_split = 0.4
-
-    def __str__(self):
-        return 'filename: {filename}, side type: {st}, train test split: {sp}'.format(filename=self.filename, st=self.trade_side_type, sp=self.test_split)
-
-class MarketData:
+class TrainingData:
     def __init__(self, filename, test_split=0.4):
         filename = filename
         csvreader = csv.reader(open(filename, newline=''), delimiter=',', quotechar='|')
@@ -76,6 +63,19 @@ class MarketData:
                     raise StopIteration
                 self.market_symbol_iter = iter(self.market_symbol_to_entries[self.market_symbols[self.market_symbol_i]])
 
+class TradeSideType(Enum):
+    LONG = auto()
+    SHORT = auto()
+    LONG_SHORT = auto()
+
+class TradingEnvInitParam():
+    filename = ''
+    trade_side_type = TradeSideType.LONG
+    test_split = 0.4
+
+    def __str__(self):
+        return 'filename: {filename}, side type: {st}, train test split: {sp}'.format(filename=self.filename, st=self.trade_side_type, sp=self.test_split)
+
 class TradingEnv(gym.Env):
     metadata = {'render.modes': ['human']}
 
@@ -93,7 +93,7 @@ class TradingEnv(gym.Env):
             self.action_value_neutral_position = 1
             space_cardinality = 3
 
-        self.market_data = MarketData(filename=init_param.filename, test_split=init_param.test_split)
+        self.market_data = TrainingData(filename=init_param.filename, test_split=init_param.test_split)
         # 0, 1, 2 translates to 1, 0, s-1 for long, neutral, short
         self.action_space = spaces.Discrete(space_cardinality)
         # minDrop,maxJump,changePT60H,rsiPT30M
