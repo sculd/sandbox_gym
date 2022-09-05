@@ -14,6 +14,10 @@ class TradeSideType(Enum):
     SHORT = auto()
     LONG_SHORT = auto()
 
+class TrainTestDataType(Enum):
+    TRAIN = auto()
+    TEST = auto()
+
 class TradingEnvInitParam():
     filename = ''
     trade_side_type = TradeSideType.LONG
@@ -22,7 +26,7 @@ class TradingEnvInitParam():
         return 'filename: {filename}, side type: {st}'.format(filename=self.filename, st=self.trade_side_type)
 
 class MarketData:
-    def __init__(self, filename):
+    def __init__(self, filename, test_split=0.4):
         filename = filename
         csvreader = csv.reader(open(filename, newline=''), delimiter=',', quotechar='|')
         self.market_symbol_to_entries = defaultdict(list)
@@ -31,8 +35,25 @@ class MarketData:
             if market == 'market':
                 continue
             self.market_symbol_to_entries[market + symbol].append(entry)
-        self.market_symbols = list(self.market_symbol_to_entries.keys())
+        market_symbols = list(self.market_symbol_to_entries.keys())
+        self.market_symbols_train, self.market_symbols_test = [], []
+        for market_symbol in market_symbols:
+            r = random.random()
+            if r < test_split:
+                self.market_symbols_test.append(market_symbol)
+            else:
+                self.market_symbols_train.append(market_symbol)
+        self.set_train_test(TrainTestDataType.TRAIN, if_reset=False)
         self.reset(shuffle=False)
+
+    def set_train_test(self, train_test_data_type, if_reset=True):
+        self.train_test_data_type = train_test_data_type
+        if train_test_data_type == TrainTestDataType.TRAIN:
+            self.market_symbols = self.market_symbols_train
+        else:
+            self.market_symbols = self.market_symbols_test
+        if if_reset:
+            self.reset()
 
     def reset(self, shuffle=True):
         if shuffle:
