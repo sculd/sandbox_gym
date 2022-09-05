@@ -11,7 +11,7 @@ from rl.agents.dqn import DQNAgent
 from rl.policy import BoltzmannQPolicy
 from rl.memory import SequentialMemory
 
-from trading.envs.trading_env import TradingEnv, TradeSideType, TradingEnvInitParam
+from trading.envs.trading_env import TradingEnv, TradeSideType, TradingEnvInitParam, TrainTestDataType
 
 filename = 'data.csv'
 init_param = TradingEnvInitParam()
@@ -50,5 +50,8 @@ dqn.fit(env, nb_steps=90000, visualize=False, verbose=2)
 dqn.save_weights('dqn_{}_weights.h5f'.format('trading'), overwrite=True)
 
 # Finally, evaluate our algorithm for 5 episodes.
+dqn.test(env, nb_episodes=5, visualize=True)
+
+env.set_train_test(TrainTestDataType.TEST)
 dqn.test(env, nb_episodes=5, visualize=True)
 #'''

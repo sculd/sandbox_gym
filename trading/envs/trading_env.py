@@ -3,7 +3,7 @@ import numpy as np
 from gym import spaces
 from enum import Enum, auto
 
-from trading.envs.train_test_data import TrainingData
+from trading.envs.train_test_data import TrainingData, TrainTestDataType
 
 INITIAL_BALANCE = 1000
 BET_AMPLITUDE = 0.1
@@ -15,7 +15,7 @@ class TradeSideType(Enum):
     LONG_SHORT = auto()
 
 class TradingEnvInitParam():
-    filename = ''
+    filename = 'data.csv'
     trade_side_type = TradeSideType.LONG
     test_split = 0.4
 
@@ -39,7 +39,7 @@ class TradingEnv(gym.Env):
             self.action_value_neutral_position = 1
             space_cardinality = 3
 
-        self.market_data = TrainingData(filename=init_param.filename, test_split=init_param.test_split)
+        self.train_data = TrainingData(filename=init_param.filename, test_split=init_param.test_split)
         # 0, 1, 2 translates to 1, 0, s-1 for long, neutral, short
         self.action_space = spaces.Discrete(space_cardinality)
         # minDrop,maxJump,changePT60H,rsiPT30M
@@ -67,9 +67,12 @@ class TradingEnv(gym.Env):
 
     def _next_entry(self):
         try:
-            return next(self.market_data)
+            return next(self.train_data)
         except StopIteration:
             return None
+
+    def set_train_test(self, train_test_data_type, if_reset=True):
+        self.train_data.set_train_test(train_test_data_type, if_reset=if_reset)
 
     def step(self, action):
         # new market/symbol, reset the position
