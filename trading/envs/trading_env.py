@@ -1,25 +1,28 @@
-import math
 import numpy as np
 import gym
 from gym import spaces
 from enum import Enum, auto
 
-from trading.envs.train_test_data import TrainingData, TrainTestDataType
+from trading.envs.train_test_data import TrainingData
 
-INITIAL_BALANCE = 1000
-BET_AMPLITUDE = 0.1
-TRADING_PRICE_SLIPPAGE = 0.002
-TRADING_COMMISION = 0.004
+DEFAULT_INITIAL_BALANCE = 1000
+DEFAULT_BET_AMPLITUDE = 0.1
+DEFAULT_TRADING_PRICE_SLIPPAGE = 0.002
+DEFAULT_TRADING_COMMISION = 0.004
 
 class TradeSideType(Enum):
     LONG = auto()
     SHORT = auto()
     LONG_SHORT = auto()
 
-class TradingEnvInitParam():
+class TradingEnvParam():
     filename = 'data.csv'
     trade_side_type = TradeSideType.LONG
     test_split = 0.4
+    initial_balance = DEFAULT_INITIAL_BALANCE
+    bet_amplitude = DEFAULT_BET_AMPLITUDE
+    trading_price_slippage = DEFAULT_TRADING_PRICE_SLIPPAGE
+    trading_commission = DEFAULT_TRADING_COMMISION
 
     def __str__(self):
         return 'filename: {filename}, side type: {st}, train test split: {sp}'.format(filename=self.filename, st=self.trade_side_type, sp=self.test_split)
@@ -27,21 +30,22 @@ class TradingEnvInitParam():
 class TradingEnv(gym.Env):
     metadata = {'render.modes': ['human']}
 
-    def __init__(self, init_param):
+    def __init__(self, env_param):
         super(TradingEnv, self).__init__()
 
-        print(init_param)
-        if init_param.trade_side_type == TradeSideType.LONG:
+        self.env_param = env_param
+        print(env_param)
+        if env_param.trade_side_type == TradeSideType.LONG:
             self.action_value_neutral_position = 0
             space_cardinality = 2
-        elif init_param.trade_side_type == TradeSideType.SHORT:
+        elif env_param.trade_side_type == TradeSideType.SHORT:
             self.action_value_neutral_position = 1
             space_cardinality = 2
         else:
             self.action_value_neutral_position = 1
             space_cardinality = 3
 
-        self.train_data = TrainingData(filename=init_param.filename, test_split=init_param.test_split)
+        self.train_data = TrainingData(filename=env_param.filename, test_split=env_param.test_split)
         # 0, 1, 2 translates to 1, 0, s-1 for long, neutral, short
         self.action_space = spaces.Discrete(space_cardinality)
         # minDrop,maxJump,changePT60H,rsiPT30M
@@ -55,11 +59,11 @@ class TradingEnv(gym.Env):
         profit = step_change * (action - self.action_value_neutral_position)
         # slippage causes the position to be positioned with a penalty
         if profit >= 0:
-            profit *= 1.00 - TRADING_PRICE_SLIPPAGE
+            profit *= 1.00 - self.env_param.trading_price_slippage
         else:
-            profit *= 1.00 + TRADING_PRICE_SLIPPAGE
+            profit *= 1.00 + self.env_param.trading_price_slippage
         action_amplitude = abs(action - self.prev_action)
-        return profit - action_amplitude * TRADING_COMMISION
+        return profit - action_amplitude * self.env_param.trading_commission
 
     def _observation(self, action):
         min_drop, max_jump, change_6h, rsi_30m = \
@@ -97,7 +101,7 @@ class TradingEnv(gym.Env):
 
         # action 0 to 2 translates to -1 to 1
         reward = self._reward(action)
-        self.balance += self.balance * BET_AMPLITUDE * reward
+        self.balance += self.balance * self.env_param.bet_amplitude * reward
 
         obs = self._observation(action)
 
@@ -111,7 +115,7 @@ class TradingEnv(gym.Env):
         self.num_position_change = 0
         self.prev_action = self.action_value_neutral_position
         self.prev_market_symbol = ''
-        self.balance = INITIAL_BALANCE
+        self.balance = self.env_param.initial_balance
 
         # the first row for the first observation
         self.entry = self._next_entry()

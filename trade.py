@@ -11,13 +11,13 @@ from rl.agents.dqn import DQNAgent
 from rl.policy import BoltzmannQPolicy
 from rl.memory import SequentialMemory
 
-from trading.envs.trading_env import TradingEnv, TradeSideType, TradingEnvInitParam, TrainTestDataType
+from trading.envs.trading_env import TradingEnv, TradeSideType, TradingEnvParam, TrainTestDataType
 
 import wandb
 from wandb.keras import WandbCallback
 
 filename = 'data.csv'
-init_param = TradingEnvInitParam()
+init_param = TradingEnvParam()
 init_param.filename = filename
 init_param.trade_side_type = TradeSideType.LONG
 env = TradingEnv(init_param)
