@@ -7,7 +7,7 @@ class TrainTestDataType(Enum):
     TEST = auto()
 
 class TrainingData:
-    def __init__(self, filename, test_split=0.4):
+    def __init__(self, filename: str, test_split: float=0.4):
         filename = filename
         csvreader = csv.reader(open(filename, newline=''), delimiter=',', quotechar='|')
         self.market_symbol_to_entries = defaultdict(list)
@@ -27,7 +27,7 @@ class TrainingData:
         self.set_train_test(TrainTestDataType.TRAIN, if_reset=False)
         self.reset(shuffle=False)
 
-    def set_train_test(self, train_test_data_type, if_reset=True):
+    def set_train_test(self, train_test_data_type: TrainTestDataType, if_reset: bool=True):
         self.train_test_data_type = train_test_data_type
         if train_test_data_type == TrainTestDataType.TRAIN:
             self.market_symbols = self.market_symbols_train
@@ -36,7 +36,7 @@ class TrainingData:
         if if_reset:
             self.reset()
 
-    def reset(self, shuffle=True):
+    def reset(self, shuffle: bool=True):
         if shuffle:
             random.shuffle(self.market_symbols)
         self.market_symbol_i = 0
