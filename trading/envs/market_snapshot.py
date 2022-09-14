@@ -70,11 +70,14 @@ class TradeSnapshots():
 
     def print_summary(self):
         print('# of trades: {n}'.format(n=len(self.trade_snapshots)))
-        print('total (raw) profit: {p}, max: {mp}, min: {mnp}'.format(
-            p=round(sum(map(lambda shot: shot.get_profit(), self.trade_snapshots)), 4),
-            mp=round(max(map(lambda shot: shot.get_profit(), self.trade_snapshots)), 4),
-            mnp=round(min(map(lambda shot: shot.get_profit(), self.trade_snapshots)), 4)
-        ))
+        if self.trade_snapshots:
+            print('total (raw) profit: {p}, max: {mp}, min: {mnp}'.format(
+                p=round(sum(map(lambda shot: shot.get_profit(), self.trade_snapshots)), 4),
+                mp=round(max(map(lambda shot: shot.get_profit(), self.trade_snapshots)), 4),
+                mnp=round(min(map(lambda shot: shot.get_profit(), self.trade_snapshots)), 4)
+            ))
+        else:
+            print('no trade made')
 
     def reset(self):
         self.trade_snapshots.clear()

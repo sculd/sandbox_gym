@@ -43,7 +43,7 @@ memory_limit = 1000
 dqn_target_model_update=1e-2
 adam_lr=1e-3
 adam_metrics='mae'
-dqn_nb_steps=800000
+dqn_nb_steps=3000000
 
 wandb.init(project="long", entity="trading-rl")
 wandb.config = {
