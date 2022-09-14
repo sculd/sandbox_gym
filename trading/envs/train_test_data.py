@@ -18,12 +18,19 @@ class TrainingData:
             self.market_symbol_to_entries[market + symbol].append(entry)
         market_symbols = list(self.market_symbol_to_entries.keys())
         self.market_symbols_train, self.market_symbols_test = [], []
-        for market_symbol in market_symbols:
-            r = random.random()
-            if r < test_split:
-                self.market_symbols_test.append(market_symbol)
-            else:
+
+        # for very small datasets
+        if len(market_symbols) < 5:
+            for market_symbol in market_symbols:
                 self.market_symbols_train.append(market_symbol)
+            self.market_symbols_test.append(self.market_symbols_train.pop())
+        else:
+            for market_symbol in market_symbols:
+                r = random.random()
+                if r < test_split:
+                    self.market_symbols_test.append(market_symbol)
+                else:
+                    self.market_symbols_train.append(market_symbol)
         self.set_train_test(TrainTestDataType.TRAIN, if_reset=False)
         self.reset(shuffle=False)
 

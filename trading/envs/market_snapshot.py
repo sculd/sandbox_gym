@@ -30,14 +30,23 @@ class TradeSnapshot():
         return datetime.timedelta(seconds=seconds)
 
     def get_profit(self):
-        p = (self.market_snapshot_exit.price_at_analysis - self.market_snapshot_enter.price_at_analysis) / self.market_snapshot_enter.price_at_analysis
+        step_change = (self.market_snapshot_exit.price_at_analysis - self.market_snapshot_enter.price_at_analysis) / self.market_snapshot_enter.price_at_analysis
         if self.trade_side_type == TradeSideType.LONG:
-            return p
+            action = 1
         else:
-            return -p
+            action = -1
+
+        profit = step_change * action
+        # slippage causes the position to be positioned with a penalty
+        if profit >= 0:
+            profit *= 1.00 - self.slippage
+        else:
+            profit *= 1.00 + self.slippage
+        return profit - self.commission
 
     def __str__(self):
-        return 'side: {s}, profit: {profit}, duration: {du}'.format(s=self.trade_side_type, profit=self.get_profit(), du=self.get_position_duration())
+        return 'enter: {enter}, exit: {exit}, symbol: {symbol}, side: {s}, profit: {profit}, duration: {du}'.format(
+            enter=self.market_snapshot_enter, exit=self.market_snapshot_exit, symbol=self.market_snapshot_enter.symbol, s=self.trade_side_type, profit=self.get_profit(), du=self.get_position_duration())
 
 class TradeSnapshots():
     trade_snapshots = []
@@ -61,7 +70,13 @@ class TradeSnapshots():
 
     def print_summary(self):
         print('# of trades: {n}'.format(n=len(self.trade_snapshots)))
-        print('total (raw) profit: {p}'.format(p=sum(map(lambda shot: shot.get_profit(), self.trade_snapshots))))
+        print('total (raw) profit: {p}, max: {mp}, min: {mnp}'.format(
+            p=round(sum(map(lambda shot: shot.get_profit(), self.trade_snapshots)), 4),
+            mp=round(max(map(lambda shot: shot.get_profit(), self.trade_snapshots)), 4),
+            mnp=round(min(map(lambda shot: shot.get_profit(), self.trade_snapshots)), 4)
+        ))
 
     def reset(self):
         self.trade_snapshots.clear()
+        self.market_snapshot_enter = None
+        self.current_trade_side_type = None

@@ -54,6 +54,8 @@ class TradingEnv(gym.Env):
 
         self.num_position_change = 0
         self.trade_snapshots = TradeSnapshots()
+        self.trade_snapshots.slippage = self.env_param.trading_price_slippage
+        self.trade_snapshots.commission = self.env_param.trading_commission
         self.reset()
 
     def _reward(self, action: int):
@@ -90,10 +92,10 @@ class TradingEnv(gym.Env):
 
     def _entry_to_market_snapshot(self):
         market_snapshot = MarketSnapshot()
-        epoch_seconds, market, symbol, step_change, price_at_analysis, min_drop, max_jump = \
+        epochseconds, market, symbol, step_change, price_at_analysis, min_drop, max_jump = \
             int(self.entry[0]), self.entry[1], self.entry[2], float(self.entry[3]), float(self.entry[4]), float(self.entry[5]), float(self.entry[6])
-        market_snapshot.epoch_seconds, market_snapshot.market, market_snapshot.symbol, market_snapshot.step_change, market_snapshot.price_at_analysis, market_snapshot.min_drop, market_snapshot.max_jump = \
-            epoch_seconds, market, symbol, step_change, price_at_analysis, min_drop, max_jump
+        market_snapshot.epochseconds, market_snapshot.market, market_snapshot.symbol, market_snapshot.step_change, market_snapshot.price_at_analysis, market_snapshot.min_drop, market_snapshot.max_jump = \
+            epochseconds, market, symbol, step_change, price_at_analysis, min_drop, max_jump
         return market_snapshot
 
     def _record_action(self, action: int):
@@ -111,7 +113,9 @@ class TradingEnv(gym.Env):
         else:
             self.trade_snapshots.close_trade(market_snapshot)
             if self.train_data.train_test_data_type == TrainTestDataType.TEST:
-                print(self.trade_snapshots.trade_snapshots[-1])
+                #print('num_position_change: {n}'.format(n=self.num_position_change))
+                #print(self.trade_snapshots.trade_snapshots[-1])
+                pass
 
     def step(self, action: int):
         # new market/symbol, reset the position
@@ -124,15 +128,18 @@ class TradingEnv(gym.Env):
         self.prev_action = action
 
         # action 0 to 2 translates to -1 to 1
-        reward = self._reward(action)
-        self.balance += self.balance * self.env_param.bet_amplitude * reward
+        step_reward = self._reward(action)
+        self.balance += self.balance * self.env_param.bet_amplitude * step_reward
+        reward = self.balance / self.env_param.initial_balance - 1.0
 
         obs = self._observation(action)
 
         # read a row ahead to calculate reward in the next step
         self.entry = self._next_entry()
 
-        return obs, reward, self.entry is None, self._info()
+        done = self.entry is None
+
+        return obs, step_reward, done, self._info()
 
     def reset(self, **kwargs):
         print('num_position_change in the prev epoch: {v}'.format(v=self.num_position_change))
