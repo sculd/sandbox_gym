@@ -70,8 +70,9 @@ class TradingEnv(gym.Env):
         return profit - action_amplitude * self.env_param.trading_commission
 
     def _observation(self, action):
-        min_drop, max_jump, change_6h, rsi_30m = \
-            float(self.entry[4]), float(self.entry[5]), float(self.entry[7]), float(self.entry[8])
+        # epochSeconds,market,symbol,stepChange,priceAtAnalysis,minDrop,maxJump,normalizedPricePT3H,changePT6H,rsiPT3H
+        step_change, min_drop, max_jump, change_6h, rsi_30m = \
+            float(self.entry[3]), float(self.entry[5]), float(self.entry[6]), float(self.entry[8]), float(self.entry[9])
         return np.array([
             action - self.action_value_neutral_position,  min_drop, max_jump #, change_6h, rsi_30m
         ])
