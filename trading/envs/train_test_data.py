@@ -10,10 +10,13 @@ class TrainingData:
     def __init__(self, filename: str, test_split: float=0.4):
         filename = filename
         csvreader = csv.reader(open(filename, newline=''), delimiter=',', quotechar='|')
+        self.column_name_to_idx = {}
         self.market_symbol_to_entries = defaultdict(list)
         for entry in csvreader:
             market, symbol = entry[1], entry[2]
             if market == 'market':
+                for i, column in enumerate(entry):
+                    self.column_name_to_idx[column] = i
                 continue
             self.market_symbol_to_entries[market + symbol].append(entry)
         market_symbols = list(self.market_symbol_to_entries.keys())
@@ -47,18 +50,24 @@ class TrainingData:
         if shuffle:
             random.shuffle(self.market_symbols)
         self.market_symbol_i = 0
-        self.market_symbol_iter = iter(self.market_symbol_to_entries[self.market_symbols[self.market_symbol_i]])
+        symbol = self.market_symbols[self.market_symbol_i]
+        self.market_symbol_iter = iter(self.market_symbol_to_entries[symbol])
 
     def __iter__(self):
         return self
+
+    def _seek_next_symbol(self):
+        self.market_symbol_i += 1
+        if self.market_symbol_i >= len(self.market_symbols):
+            self.reset()
+        symbol = self.market_symbols[self.market_symbol_i]
+        self.market_symbol_iter = iter(self.market_symbol_to_entries[symbol])
 
     def __next__(self):
         while True:
             try:
                 return next(self.market_symbol_iter)
             except StopIteration:
-                self.market_symbol_i += 1
-                if self.market_symbol_i >= len(self.market_symbols):
-                    self.reset()
-                    raise StopIteration
-                self.market_symbol_iter = iter(self.market_symbol_to_entries[self.market_symbols[self.market_symbol_i]])
+                # end of the current epoch. The next epoch reads the next symbol.
+                self._seek_next_symbol()
+                raise StopIteration

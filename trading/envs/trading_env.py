@@ -59,7 +59,7 @@ class TradingEnv(gym.Env):
         self.reset()
 
     def _reward(self, action: int):
-        step_change = float(self.entry[3])
+        step_change = self.entry['stepChange']
         profit = step_change * (action - self.action_value_neutral_position)
         # slippage causes the position to be positioned with a penalty
         if profit >= 0:
@@ -70,11 +70,8 @@ class TradingEnv(gym.Env):
         return profit - action_amplitude * self.env_param.trading_commission
 
     def _observation(self, action):
-        # epochSeconds,market,symbol,stepChange,priceAtAnalysis,minDrop,maxJump,normalizedPricePT3H,changePT6H,rsiPT3H
-        step_change, min_drop, max_jump, change_6h, rsi_30m = \
-            float(self.entry[3]), float(self.entry[5]), float(self.entry[6]), float(self.entry[8]), float(self.entry[9])
         return np.array([
-            action - self.action_value_neutral_position,  min_drop, max_jump #, change_6h, rsi_30m
+            action - self.action_value_neutral_position, self.entry['minDrop'], self.entry['maxJump']
         ])
 
     def _info(self):
@@ -84,7 +81,22 @@ class TradingEnv(gym.Env):
 
     def _next_entry(self):
         try:
-            return next(self.train_data)
+            row = next(self.train_data)
+            return {
+                'epochSeconds': int(row[self.train_data.column_name_to_idx['epochSeconds']]),
+                'market': row[self.train_data.column_name_to_idx['market']],
+                'symbol': row[self.train_data.column_name_to_idx['symbol']],
+                'stepChange': float(row[self.train_data.column_name_to_idx['stepChange']]),
+                'priceAtAnalysis': float(row[self.train_data.column_name_to_idx['priceAtAnalysis']]),
+                'minDrop': float(row[self.train_data.column_name_to_idx['minDrop']]),
+                'maxJump': float(row[self.train_data.column_name_to_idx['maxJump']]),
+                'normalizedPricePT3H': float(row[self.train_data.column_name_to_idx['normalizedPricePT3H']]),
+                'changePT6H': float(row[self.train_data.column_name_to_idx['changePT6H']]),
+                'rsiPT3H': float(row[self.train_data.column_name_to_idx['rsiPT3H']]),
+                'bandwidthPT40M2': float(row[self.train_data.column_name_to_idx['bandwidthPT40M2']]),
+                'bandPercentPT40M2': float(row[self.train_data.column_name_to_idx['bandPercentPT40M2']]),
+                'moneyFlowPT40M': float(row[self.train_data.column_name_to_idx['moneyFlowPT40M']])
+            }
         except StopIteration:
             return None
 
@@ -93,10 +105,8 @@ class TradingEnv(gym.Env):
 
     def _entry_to_market_snapshot(self):
         market_snapshot = MarketSnapshot()
-        epochseconds, market, symbol, step_change, price_at_analysis, min_drop, max_jump = \
-            int(self.entry[0]), self.entry[1], self.entry[2], float(self.entry[3]), float(self.entry[4]), float(self.entry[5]), float(self.entry[6])
         market_snapshot.epochseconds, market_snapshot.market, market_snapshot.symbol, market_snapshot.step_change, market_snapshot.price_at_analysis, market_snapshot.min_drop, market_snapshot.max_jump = \
-            epochseconds, market, symbol, step_change, price_at_analysis, min_drop, max_jump
+            self.entry['epochSeconds'], self.entry['market'], self.entry['symbol'], self.entry['stepChange'], self.entry['priceAtAnalysis'], self.entry['minDrop'], self.entry['maxJump']
         return market_snapshot
 
     def _record_action(self, action: int):
@@ -120,7 +130,7 @@ class TradingEnv(gym.Env):
 
     def step(self, action: int):
         # new market/symbol, reset the position
-        market, symbol = self.entry[1], self.entry[2]
+        market, symbol = self.entry['market'], self.entry['symbol']
         if market + symbol != self.prev_market_symbol:
             self.prev_action = self.action_value_neutral_position
         self.prev_market_symbol = market + symbol
