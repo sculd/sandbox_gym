@@ -76,6 +76,9 @@ class TradeSnapshots():
                 mp=round(max(map(lambda shot: shot.get_profit(), self.trade_snapshots)), 4),
                 mnp=round(min(map(lambda shot: shot.get_profit(), self.trade_snapshots)), 4)
             ))
+            print('last trade: {t}', self.trade_snapshots[-1])
+            if len(self.trade_snapshots) > 1:
+                print('second last trade: {t}', self.trade_snapshots[-2])
         else:
             print('no trade made')
 

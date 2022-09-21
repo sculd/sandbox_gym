@@ -61,6 +61,7 @@ class TrainingData:
         if self.market_symbol_i >= len(self.market_symbols):
             self.reset()
         symbol = self.market_symbols[self.market_symbol_i]
+        print('the next symbol is {symbol}'.format(symbol=symbol))
         self.market_symbol_iter = iter(self.market_symbol_to_entries[symbol])
 
     def __next__(self):

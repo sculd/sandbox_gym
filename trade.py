@@ -30,8 +30,9 @@ print('Observatoin shape', env.observation_space.shape)
 model = Sequential()
 model.add(Flatten(input_shape=(1,) + env.observation_space.shape))
 #model.add(SimpleRNN(4, input_shape=env.observation_space.shape))
-model.add(Activation('relu'))
 model.add(Dense(16))
+model.add(Activation('relu'))
+model.add(Dense(8))
 model.add(Activation('relu'))
 model.add(Dense(env.action_space.n))
 model.add(Activation('linear'))
@@ -43,9 +44,9 @@ memory_limit = 1000
 dqn_target_model_update=1e-2
 adam_lr=1e-3
 adam_metrics='mae'
-dqn_nb_steps=6000000
+dqn_nb_steps=3000000
 
-wandb.init(project="long", entity="trading-rl")
+wandb.init(project="long multi assets", entity="trading-rl")
 wandb.config = {
   "memory_limit": memory_limit,
   "dqn_target_model_update": dqn_target_model_update,
@@ -57,20 +58,23 @@ wandb.config = {
 # ... Define a model
 memory = SequentialMemory(limit=memory_limit, window_length=1)
 policy = BoltzmannQPolicy()
-dqn = DQNAgent(model=model, nb_actions=env.action_space.n, memory=memory, nb_steps_warmup=10, target_model_update=dqn_target_model_update, policy=policy)
+dqn = DQNAgent(model=model, nb_actions=env.action_space.n, memory=memory, nb_steps_warmup=120, target_model_update=dqn_target_model_update, policy=policy)
 dqn.compile(Adam(lr=adam_lr), metrics=[adam_metrics])
 
-# You can always safely abort the training prematurely using Ctrl + C.
-dqn.fit(env, nb_steps=dqn_nb_steps, visualize=False, verbose=2, callbacks=[WandbCallback()])
+if False:
+  # The training can be aborted prematurely using Ctrl + C.
+  dqn.fit(env, nb_steps=dqn_nb_steps, visualize=False, verbose=2, callbacks=[WandbCallback()])
 
-# After training is done, we save the final weights.
-dqn.save_weights('dqn_{}_weights.h5f'.format('trading'), overwrite=True)
+  dqn.save_weights('dqn_trading_weights.h5f', overwrite=True)
+else:
+  dqn.load_weights('dqn_trading_weights.h5f')
+
 
 # Finally, evaluate our algorithm for 5 episodes.
 print("Testing with training dataset")
-dqn.test(env, nb_episodes=2, visualize=True)
+dqn.test(env, nb_episodes=200, visualize=True)
 
 print("Testing with test dataset")
 env.set_train_test(TrainTestDataType.TEST)
-dqn.test(env, nb_episodes=2, visualize=True)
+dqn.test(env, nb_episodes=200, visualize=True)
 env.reset()

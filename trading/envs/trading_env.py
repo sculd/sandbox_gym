@@ -10,6 +10,8 @@ DEFAULT_INITIAL_BALANCE = 1000
 DEFAULT_BET_AMPLITUDE = 0.1
 DEFAULT_TRADING_PRICE_SLIPPAGE = 0.002
 DEFAULT_TRADING_COMMISION = 0.004
+# epochSeconds,market,symbol,stepChange,priceAtAnalysis,minDrop,maxJump,changeSinceMinDrop,changeSinceMaxJump,normalizedPricePT3H,changePT6H,rsiPT3H,bandwidthPT2H2,bandPercentPT2H2,moneyFlowPT40M
+DEFAULT_FEATURES = ['minDrop', 'maxJump', 'changeSinceMinDrop', 'changeSinceMaxJump', 'bandwidthPT2H2', 'bandPercentPT2H2', 'moneyFlowPT40M']
 
 class StrategyTradeSideType(Enum):
     LONG = auto()
@@ -24,6 +26,7 @@ class TradingEnvParam():
     bet_amplitude = DEFAULT_BET_AMPLITUDE
     trading_price_slippage = DEFAULT_TRADING_PRICE_SLIPPAGE
     trading_commission = DEFAULT_TRADING_COMMISION
+    features = DEFAULT_FEATURES
 
     def __str__(self):
         return 'filename: {filename}, side type: {st}, train test split: {sp}'.format(filename=self.filename, st=self.trade_side_type, sp=self.test_split)
@@ -49,8 +52,8 @@ class TradingEnv(gym.Env):
         self.train_data = TrainingData(filename=env_param.filename, test_split=env_param.test_split)
         # 0, 1, 2 translates to 1, 0, s-1 for long, neutral, short
         self.action_space = spaces.Discrete(space_cardinality)
-        # minDrop,maxJump,changePT60H,rsiPT30M
-        self.observation_space = spaces.Box(low=-1.0, high=1.0, shape=(3,), dtype=np.uint8)
+        # position + features
+        self.observation_space = spaces.Box(low=-1.0, high=1.0, shape=(1 + len(self.env_param.features),), dtype=np.uint8)
 
         self.num_position_change = 0
         self.trade_snapshots = TradeSnapshots()
@@ -67,12 +70,15 @@ class TradingEnv(gym.Env):
         else:
             profit *= 1.00 + self.env_param.trading_price_slippage
         action_amplitude = abs(action - self.prev_action)
-        return profit - action_amplitude * self.env_param.trading_commission
+        r = profit - action_amplitude * self.env_param.trading_commission
+        return r * 100
 
     def _observation(self, action):
-        return np.array([
-            action - self.action_value_neutral_position, self.entry['minDrop'], self.entry['maxJump']
-        ])
+        # features
+        obs = [action - self.action_value_neutral_position]
+        for feature in self.env_param.features:
+            obs.append(self.entry[feature])
+        return np.array(obs)
 
     def _info(self):
         return {
@@ -82,21 +88,15 @@ class TradingEnv(gym.Env):
     def _next_entry(self):
         try:
             row = next(self.train_data)
-            return {
-                'epochSeconds': int(row[self.train_data.column_name_to_idx['epochSeconds']]),
-                'market': row[self.train_data.column_name_to_idx['market']],
-                'symbol': row[self.train_data.column_name_to_idx['symbol']],
-                'stepChange': float(row[self.train_data.column_name_to_idx['stepChange']]),
-                'priceAtAnalysis': float(row[self.train_data.column_name_to_idx['priceAtAnalysis']]),
-                'minDrop': float(row[self.train_data.column_name_to_idx['minDrop']]),
-                'maxJump': float(row[self.train_data.column_name_to_idx['maxJump']]),
-                'normalizedPricePT3H': float(row[self.train_data.column_name_to_idx['normalizedPricePT3H']]),
-                'changePT6H': float(row[self.train_data.column_name_to_idx['changePT6H']]),
-                'rsiPT3H': float(row[self.train_data.column_name_to_idx['rsiPT3H']]),
-                'bandwidthPT40M2': float(row[self.train_data.column_name_to_idx['bandwidthPT40M2']]),
-                'bandPercentPT40M2': float(row[self.train_data.column_name_to_idx['bandPercentPT40M2']]),
-                'moneyFlowPT40M': float(row[self.train_data.column_name_to_idx['moneyFlowPT40M']])
-            }
+            entry = {}
+            for column, idx in self.train_data.column_name_to_idx.items():
+                if column == 'epochSeconds':
+                    entry[column] = int(row[idx])
+                elif column == 'market' or column == 'symbol':
+                    entry[column] = row[idx]
+                else:
+                    entry[column] = float(row[idx])
+            return entry
         except StopIteration:
             return None
 
@@ -149,13 +149,13 @@ class TradingEnv(gym.Env):
         self.entry = self._next_entry()
 
         done = self.entry is None
+        if done and self.train_data.train_test_data_type == TrainTestDataType.TEST:
+            self.trade_snapshots.print_summary() 
 
         return obs, step_reward, done, self._info()
 
     def reset(self, **kwargs):
         print('num_position_change in the prev epoch: {v}'.format(v=self.num_position_change))
-        if self.train_data.train_test_data_type == TrainTestDataType.TEST:
-            self.trade_snapshots.print_summary()
         self.trade_snapshots.reset()
         self.num_position_change = 0
         self.prev_action = self.action_value_neutral_position
