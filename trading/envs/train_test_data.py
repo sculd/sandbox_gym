@@ -2,12 +2,20 @@ import csv, random
 from collections import defaultdict
 from enum import Enum, auto
 
+DEFAULT_SEED = 100
+
 class TrainTestDataType(Enum):
     TRAIN = auto()
     TEST = auto()
 
-class TrainingData:
-    def __init__(self, filename: str, test_split: float=0.4):
+def _hash_with_seed(value: str, seed: int):
+    hash=0
+    for ch in value:
+        hash = (hash * (seed * 17) ^ ord(ch) * seed) & 0xFFFFFFFF
+    return hash
+
+class MarketData:
+    def __init__(self, filename: str, test_split: float=0.4, seed: int=DEFAULT_SEED):
         filename = filename
         csvreader = csv.reader(open(filename, newline=''), delimiter=',', quotechar='|')
         self.column_name_to_idx = {}
@@ -22,20 +30,17 @@ class TrainingData:
         market_symbols = list(self.market_symbol_to_entries.keys())
         self.market_symbols_train, self.market_symbols_test = [], []
 
-        # for very small datasets
-        if len(market_symbols) < 5:
-            for market_symbol in market_symbols:
-                self.market_symbols_train.append(market_symbol)
-            self.market_symbols_test.append(self.market_symbols_train.pop())
-        else:
-            for market_symbol in market_symbols:
-                r = random.random()
-                if r < test_split:
-                    self.market_symbols_test.append(market_symbol)
-                else:
-                    self.market_symbols_train.append(market_symbol)
+        self._split_train_test(market_symbols, test_split, seed)
         self.set_train_test(TrainTestDataType.TRAIN, if_reset=False)
         self.reset(shuffle=False)
+
+    def _split_train_test(self, market_symbols, test_split, seed):
+        symbols_with_hash = [(_hash_with_seed(symbol, seed), symbol,) for symbol in market_symbols]
+        symbols_with_hash.sort()
+
+        train_size = int(len(symbols_with_hash) * (1.0 - test_split))
+        self.market_symbols_train = [s[1] for s in symbols_with_hash[:train_size]]
+        self.market_symbols_test = [s[1] for s in symbols_with_hash[train_size:]]
 
     def set_train_test(self, train_test_data_type: TrainTestDataType, if_reset: bool=True):
         self.train_test_data_type = train_test_data_type
@@ -48,7 +53,7 @@ class TrainingData:
 
     def reset(self, shuffle: bool=True):
         if shuffle:
-            random.shuffle(self.market_symbols)
+            pass # random.shuffle(self.market_symbols)
         self.market_symbol_i = 0
         symbol = self.market_symbols[self.market_symbol_i]
         self.market_symbol_iter = iter(self.market_symbol_to_entries[symbol])

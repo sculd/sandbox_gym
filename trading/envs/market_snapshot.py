@@ -9,10 +9,14 @@ class MarketSnapshot():
     price_at_analysis = 0.0
     min_drop = 0.0
     max_jump = 0.0
+    features = {}
+
+    def __init__(self):
+        self.features = {}
 
     def __str__(self):
-        return 'epochseconds: {epochseconds}, market: {market}, symbol: {symbol}, step_change: {step_change}, price_at_analysis: {price_at_analysis}, min_drop: {min_drop}, max_jump: {max_jump}'.format(
-            epochseconds=self.epochseconds, market=self.market, symbol=self.symbol, step_change=self.step_change, price_at_analysis=self.price_at_analysis, min_drop=self.min_drop, max_jump=self.max_jump)
+        return 'epochseconds: {epochseconds}, market: {market}, symbol: {symbol}, step_change: {step_change}, price_at_analysis: {price_at_analysis}, min_drop: {min_drop}, max_jump: {max_jump}, features: {features}'.format(
+            epochseconds=self.epochseconds, market=self.market, symbol=self.symbol, step_change=self.step_change, price_at_analysis=self.price_at_analysis, min_drop=self.min_drop, max_jump=self.max_jump, features=self.features)
 
 class TradeSideType(Enum):
     LONG = auto()
@@ -45,7 +49,7 @@ class TradeSnapshot():
         return profit - self.commission
 
     def __str__(self):
-        return 'enter: {enter}, exit: {exit}, symbol: {symbol}, side: {s}, profit: {profit}, duration: {du}'.format(
+        return 'enter: {enter}\nexit: {exit}\nsymbol: {symbol}, side: {s}, profit: {profit}, duration: {du}'.format(
             enter=self.market_snapshot_enter, exit=self.market_snapshot_exit, symbol=self.market_snapshot_enter.symbol, s=self.trade_side_type, profit=self.get_profit(), du=self.get_position_duration())
 
 class TradeSnapshots():
@@ -69,18 +73,24 @@ class TradeSnapshots():
         self.trade_snapshots.append(trade_snapshot)
 
     def print_summary(self):
+        print('epoch summary')
         print('# of trades: {n}'.format(n=len(self.trade_snapshots)))
         if self.trade_snapshots:
-            print('total (raw) profit: {p}, max: {mp}, min: {mnp}'.format(
+            print('total profit: {p}, max: {mp}, min: {mnp}'.format(
                 p=round(sum(map(lambda shot: shot.get_profit(), self.trade_snapshots)), 4),
                 mp=round(max(map(lambda shot: shot.get_profit(), self.trade_snapshots)), 4),
                 mnp=round(min(map(lambda shot: shot.get_profit(), self.trade_snapshots)), 4)
             ))
-            print('last trade: {t}', self.trade_snapshots[-1])
+            print('last trade:\n{t}'.format(t=self.trade_snapshots[-1]))
             if len(self.trade_snapshots) > 1:
-                print('second last trade: {t}', self.trade_snapshots[-2])
+                print('second last trade:\n{t}'.format(t=self.trade_snapshots[-2]))
+            if len(self.trade_snapshots) > 2:
+                print('third last trade:\n{t}'.format(t=self.trade_snapshots[-3]))
         else:
-            print('no trade made')
+            print('no closed trade made')
+
+        if self.market_snapshot_enter:
+            print('open position enter: {t}'.format(t=self.market_snapshot_enter))
 
     def reset(self):
         self.trade_snapshots.clear()

@@ -1,5 +1,5 @@
-from trading.envs.trading_env import TrainingData, TrainTestDataType
-md = TrainingData('data.csv')
+from trading.envs.trading_env import MarketData, TrainTestDataType
+md = MarketData('data.csv')
 for entry in md:
     print(entry)
 

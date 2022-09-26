@@ -3,7 +3,7 @@ import gym
 from gym import spaces
 from enum import Enum, auto
 
-from trading.envs.train_test_data import TrainingData, TrainTestDataType
+from trading.envs.train_test_data import MarketData, TrainTestDataType
 from trading.envs.market_snapshot import MarketSnapshot, TradeSnapshots, TradeSnapshot, TradeSideType
 
 DEFAULT_INITIAL_BALANCE = 1000
@@ -11,7 +11,8 @@ DEFAULT_BET_AMPLITUDE = 0.1
 DEFAULT_TRADING_PRICE_SLIPPAGE = 0.002
 DEFAULT_TRADING_COMMISION = 0.004
 # epochSeconds,market,symbol,stepChange,priceAtAnalysis,minDrop,maxJump,changeSinceMinDrop,changeSinceMaxJump,normalizedPricePT3H,changePT6H,rsiPT3H,bandwidthPT2H2,bandPercentPT2H2,moneyFlowPT40M
-DEFAULT_FEATURES = ['minDrop', 'maxJump', 'changeSinceMinDrop', 'changeSinceMaxJump', 'bandwidthPT2H2', 'bandPercentPT2H2', 'moneyFlowPT40M']
+DEFAULT_FEATURES = ['minDrop', 'maxJump', 'bandwidthPT2H2', 'bandPercentPT2H2', 'moneyFlowPT40M']
+DEFAULT_SEED = 100
 
 class StrategyTradeSideType(Enum):
     LONG = auto()
@@ -27,6 +28,7 @@ class TradingEnvParam():
     trading_price_slippage = DEFAULT_TRADING_PRICE_SLIPPAGE
     trading_commission = DEFAULT_TRADING_COMMISION
     features = DEFAULT_FEATURES
+    seed = DEFAULT_SEED
 
     def __str__(self):
         return 'filename: {filename}, side type: {st}, train test split: {sp}'.format(filename=self.filename, st=self.trade_side_type, sp=self.test_split)
@@ -49,7 +51,7 @@ class TradingEnv(gym.Env):
             self.action_value_neutral_position = 1
             space_cardinality = 3
 
-        self.train_data = TrainingData(filename=env_param.filename, test_split=env_param.test_split)
+        self.train_data = MarketData(filename=env_param.filename, test_split=env_param.test_split, seed=env_param.seed)
         # 0, 1, 2 translates to 1, 0, s-1 for long, neutral, short
         self.action_space = spaces.Discrete(space_cardinality)
         # position + features
@@ -105,8 +107,11 @@ class TradingEnv(gym.Env):
 
     def _entry_to_market_snapshot(self):
         market_snapshot = MarketSnapshot()
-        market_snapshot.epochseconds, market_snapshot.market, market_snapshot.symbol, market_snapshot.step_change, market_snapshot.price_at_analysis, market_snapshot.min_drop, market_snapshot.max_jump = \
-            self.entry['epochSeconds'], self.entry['market'], self.entry['symbol'], self.entry['stepChange'], self.entry['priceAtAnalysis'], self.entry['minDrop'], self.entry['maxJump']
+        market_snapshot.epochseconds, market_snapshot.market, market_snapshot.symbol, market_snapshot.step_change, market_snapshot.price_at_analysis = \
+            self.entry['epochSeconds'], self.entry['market'], self.entry['symbol'], self.entry['stepChange'], self.entry['priceAtAnalysis']
+        market_snapshot.min_drop, market_snapshot.max_jump = self.entry['minDrop'], self.entry['maxJump']
+        for feature in self.env_param.features:
+            market_snapshot.features[feature] = self.entry[feature]
         return market_snapshot
 
     def _record_action(self, action: int):
@@ -151,11 +156,12 @@ class TradingEnv(gym.Env):
         done = self.entry is None
         if done and self.train_data.train_test_data_type == TrainTestDataType.TEST:
             self.trade_snapshots.print_summary() 
+            print('current epoch is done. num_position_change in the epoch: {v}'.format(v=self.num_position_change))
+            print('')
 
         return obs, step_reward, done, self._info()
 
     def reset(self, **kwargs):
-        print('num_position_change in the prev epoch: {v}'.format(v=self.num_position_change))
         self.trade_snapshots.reset()
         self.num_position_change = 0
         self.prev_action = self.action_value_neutral_position

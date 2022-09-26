@@ -72,7 +72,7 @@ else:
 
 # Finally, evaluate our algorithm for 5 episodes.
 print("Testing with training dataset")
-dqn.test(env, nb_episodes=200, visualize=True)
+#dqn.test(env, nb_episodes=200, visualize=True)
 
 print("Testing with test dataset")
 env.set_train_test(TrainTestDataType.TEST)
