@@ -53,7 +53,7 @@ class MarketData:
 
     def reset(self, shuffle: bool=True):
         if shuffle:
-            pass # random.shuffle(self.market_symbols)
+            random.shuffle(self.market_symbols)
         self.market_symbol_i = 0
         symbol = self.market_symbols[self.market_symbol_i]
         self.market_symbol_iter = iter(self.market_symbol_to_entries[symbol])
