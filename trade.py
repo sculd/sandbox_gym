@@ -37,7 +37,7 @@ model.add(Activation('relu'))
 model.add(Dense(env.action_space.n))
 model.add(Activation('linear'))
 print(model.summary())
-input("Press Enter to continue...")
+#input("Press Enter to continue...")
 
 
 memory_limit = 1000

@@ -49,8 +49,8 @@ class TradeSnapshot():
         return profit - self.commission
 
     def __str__(self):
-        return 'enter: {enter}\nexit: {exit}\nsymbol: {symbol}, side: {s}, profit: {profit}, duration: {du}'.format(
-            enter=self.market_snapshot_enter, exit=self.market_snapshot_exit, symbol=self.market_snapshot_enter.symbol, s=self.trade_side_type, profit=self.get_profit(), du=self.get_position_duration())
+        return 'symbol: {symbol}, profit: {profit}, duration: {du} side: {s},\nenter: {enter}\nexit: {exit}'.format(
+            enter=self.market_snapshot_enter, exit=self.market_snapshot_exit, symbol=self.market_snapshot_enter.symbol, s=self.trade_side_type, profit=round(self.get_profit(), 3), du=self.get_position_duration())
 
 class TradeSnapshots():
     trade_snapshots = []
@@ -81,6 +81,13 @@ class TradeSnapshots():
                 mp=round(max(map(lambda shot: shot.get_profit(), self.trade_snapshots)), 4),
                 mnp=round(min(map(lambda shot: shot.get_profit(), self.trade_snapshots)), 4)
             ))
+
+            print('duration, avg: {avg}, max: {md}, min: {mnd}'.format(
+                avg=datetime.timedelta(seconds=sum(map(lambda shot: shot.get_position_duration().total_seconds(), self.trade_snapshots))/len(self.trade_snapshots)),
+                md=datetime.timedelta(seconds=max(map(lambda shot: shot.get_position_duration().total_seconds(), self.trade_snapshots))),
+                mnd=datetime.timedelta(seconds=min(map(lambda shot: shot.get_position_duration().total_seconds(), self.trade_snapshots)))
+            ))
+
             print('last trade:\n{t}'.format(t=self.trade_snapshots[-1]))
             if len(self.trade_snapshots) > 1:
                 print('second last trade:\n{t}'.format(t=self.trade_snapshots[-2]))
