@@ -6,6 +6,7 @@ from enum import Enum, auto
 from trading.envs.train_test_data import MarketData, TrainTestDataType
 from trading.envs.market_snapshot import MarketSnapshot, TradeSnapshots, TradeSnapshot, TradeSideType
 
+DEFAULT_TEST_SPLIT = 0.4
 DEFAULT_INITIAL_BALANCE = 1000
 DEFAULT_BET_AMPLITUDE = 0.1
 DEFAULT_TRADING_PRICE_SLIPPAGE = 0.002
@@ -22,7 +23,7 @@ class StrategyTradeSideType(Enum):
 class TradingEnvParam():
     filename = 'data.csv'
     trade_side_type = StrategyTradeSideType.LONG
-    test_split = 0.4
+    test_split = DEFAULT_TEST_SPLIT
     initial_balance = DEFAULT_INITIAL_BALANCE
     bet_amplitude = DEFAULT_BET_AMPLITUDE
     trading_price_slippage = DEFAULT_TRADING_PRICE_SLIPPAGE

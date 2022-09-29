@@ -12,6 +12,7 @@ from rl.policy import BoltzmannQPolicy
 from rl.memory import SequentialMemory
 
 from trading.envs.trading_env import TradingEnv, StrategyTradeSideType, TradingEnvParam, TrainTestDataType
+from trading.envs.market_snapshot import TradeSnapshots
 
 import wandb
 from wandb.keras import WandbCallback
@@ -70,11 +71,26 @@ else:
   dqn.load_weights('dqn_trading_weights.h5f')
 
 
-# Finally, evaluate our algorithm for 5 episodes.
+'''
 print("Testing with training dataset")
-#dqn.test(env, nb_episodes=200, visualize=True)
+dqn.test(env, nb_episodes=200, visualize=True)
 
 print("Testing with test dataset")
 env.set_train_test(TrainTestDataType.TEST)
 dqn.test(env, nb_episodes=200, visualize=True)
 env.reset()
+'''
+
+filename_validation = 'data_2.csv'
+init_param_validation = TradingEnvParam()
+init_param_validation.filename = filename_validation
+init_param_validation.trade_side_type = StrategyTradeSideType.LONG
+init_param_validation.test_split = 0.9
+env_validation = TradingEnv(init_param_validation)
+print("Testing with validation dataset")
+env_validation.set_train_test(TrainTestDataType.TEST)
+dqn.test(env_validation, nb_episodes=200, visualize=True)
+env_validation.reset()
+
+
+tradesnapshot = TradeSnapshots()

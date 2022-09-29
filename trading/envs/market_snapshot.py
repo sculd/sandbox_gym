@@ -1,5 +1,6 @@
 import datetime
 from enum import Enum, auto
+from typing import List
 
 class MarketSnapshot():
     epochseconds = 0
@@ -14,6 +15,17 @@ class MarketSnapshot():
     def __init__(self):
         self.features = {}
 
+    def to_csv_header(self) -> str:
+        l = ['epochseconds', 'market', 'symbol']
+        l += [k for k in self.features.keys()]
+        return ','.join(l)
+
+    def to_csv_row(self) -> str:
+        l = ['{}'.format(self.epochseconds), self.market, self.symbol]
+        l += [v for v in self.features.values()]
+        return ','.join(l)
+
+
     def __str__(self):
         return 'epochseconds: {epochseconds}, market: {market}, symbol: {symbol}, step_change: {step_change}, price_at_analysis: {price_at_analysis}, min_drop: {min_drop}, max_jump: {max_jump}, features: {features}'.format(
             epochseconds=self.epochseconds, market=self.market, symbol=self.symbol, step_change=self.step_change, price_at_analysis=self.price_at_analysis, min_drop=self.min_drop, max_jump=self.max_jump, features=self.features)
@@ -23,11 +35,11 @@ class TradeSideType(Enum):
     SHORT = auto()
 
 class TradeSnapshot():
-    market_snapshot_enter = None
-    market_snapshot_exit = None
-    trade_side_type = None
-    slippage = 0.0
-    commission = 0.0
+    market_snapshot_enter: MarketSnapshot = None
+    market_snapshot_exit: MarketSnapshot = None
+    trade_side_type: TradeSideType = None
+    slippage: float = 0.0
+    commission: float = 0.0
 
     def get_position_duration(self):
         seconds = self.market_snapshot_exit.epochseconds - self.market_snapshot_enter.epochseconds
@@ -48,16 +60,22 @@ class TradeSnapshot():
             profit *= 1.00 + self.slippage
         return profit - self.commission
 
+    def to_csv_header(self) -> str:
+        return '{enter},{exit},trade_side_type'.format(enter=self.market_snapshot_enter.to_csv_header(), exit=self.market_snapshot_exit.to_csv_header())
+
+    def to_csv_row(self) -> str:
+        return '{enter},{exit},{side}'.format(enter=self.market_snapshot_enter.to_csv_row(), exit=self.market_snapshot_exit.to_csv_row(), side=self.trade_side_type)
+
     def __str__(self):
         return 'symbol: {symbol}, profit: {profit}, duration: {du} side: {s},\nenter: {enter}\nexit: {exit}'.format(
             enter=self.market_snapshot_enter, exit=self.market_snapshot_exit, symbol=self.market_snapshot_enter.symbol, s=self.trade_side_type, profit=round(self.get_profit(), 3), du=self.get_position_duration())
 
 class TradeSnapshots():
-    trade_snapshots = []
-    market_snapshot_enter = None
-    current_trade_side_type = None
-    slippage = 0.0
-    commission = 0.0
+    trade_snapshots: List[TradeSnapshot] = []
+    market_snapshot_enter: MarketSnapshot = None
+    current_trade_side_type: TradeSideType = None
+    slippage: float = 0.0
+    commission: float = 0.0
 
     def open_trade(self, market_snapshot_enter: MarketSnapshot, trade_side_type: TradeSideType):
         self.market_snapshot_enter = market_snapshot_enter
@@ -98,6 +116,14 @@ class TradeSnapshots():
 
         if self.market_snapshot_enter:
             print('open position enter: {t}'.format(t=self.market_snapshot_enter))
+
+    def to_csv(self, filename):
+        if not self.trade_snapshots:
+            return
+        with open(filename, 'w') as f:
+            f.write('{}\n'.format(self.trade_snapshots[0].to_csv_header()))
+            for trade_snapshot in self.trade_snapshots:
+                f.write('{}\n'.format(trade_snapshot.to_csv_row()))
 
     def reset(self):
         self.trade_snapshots.clear()
