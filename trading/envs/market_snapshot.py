@@ -15,14 +15,16 @@ class MarketSnapshot():
     def __init__(self):
         self.features = {}
 
-    def to_csv_header(self) -> str:
-        l = ['epochseconds', 'market', 'symbol']
-        l += [k for k in self.features.keys()]
+    def to_csv_header(self, prefix = None) -> str:
+        if not prefix:
+            prefix = ''
+        l = [prefix + 'epochseconds', prefix + 'market', prefix + 'symbol']
+        l += [prefix + k for k in self.features.keys()]
         return ','.join(l)
 
     def to_csv_row(self) -> str:
         l = ['{}'.format(self.epochseconds), self.market, self.symbol]
-        l += [v for v in self.features.values()]
+        l += [str(v) for v in self.features.values()]
         return ','.join(l)
 
 
@@ -61,31 +63,40 @@ class TradeSnapshot():
         return profit - self.commission
 
     def to_csv_header(self) -> str:
-        return '{enter},{exit},trade_side_type'.format(enter=self.market_snapshot_enter.to_csv_header(), exit=self.market_snapshot_exit.to_csv_header())
+        return '{enter},{exit},trade_side_type,profit,duration'.format(enter=self.market_snapshot_enter.to_csv_header('enter.'), exit=self.market_snapshot_exit.to_csv_header('exit.'))
 
     def to_csv_row(self) -> str:
-        return '{enter},{exit},{side}'.format(enter=self.market_snapshot_enter.to_csv_row(), exit=self.market_snapshot_exit.to_csv_row(), side=self.trade_side_type)
+        return '{enter},{exit},{side},{profit},{dur}'.format(
+            enter=self.market_snapshot_enter.to_csv_row(), exit=self.market_snapshot_exit.to_csv_row(),
+            side=self.trade_side_type, profit=self.get_profit(), dur=self.get_position_duration())
 
     def __str__(self):
         return 'symbol: {symbol}, profit: {profit}, duration: {du} side: {s},\nenter: {enter}\nexit: {exit}'.format(
             enter=self.market_snapshot_enter, exit=self.market_snapshot_exit, symbol=self.market_snapshot_enter.symbol, s=self.trade_side_type, profit=round(self.get_profit(), 3), du=self.get_position_duration())
 
 class TradeSnapshots():
-    trade_snapshots: List[TradeSnapshot] = []
-    market_snapshot_enter: MarketSnapshot = None
-    current_trade_side_type: TradeSideType = None
+    trade_snapshots: List[TradeSnapshot] = None
+    open_trade_snapshot: TradeSnapshot = None
     slippage: float = 0.0
     commission: float = 0.0
 
+    def __init__(self):
+        self.trade_snapshots = []
+
     def open_trade(self, market_snapshot_enter: MarketSnapshot, trade_side_type: TradeSideType):
         self.market_snapshot_enter = market_snapshot_enter
-        self.current_trade_side_type = trade_side_type
+
+        self.open_trade_snapshot = TradeSnapshot()
+        self.open_trade_snapshot.market_snapshot_enter = market_snapshot_enter
+        self.open_trade_snapshot.trade_side_type = trade_side_type
+        self.open_trade_snapshot.slippage = self.slippage
+        self.open_trade_snapshot.commission = self.commission
 
     def close_trade(self, market_snapshot_exit: MarketSnapshot):
         trade_snapshot = TradeSnapshot()
-        trade_snapshot.market_snapshot_enter = self.market_snapshot_enter
+        trade_snapshot.market_snapshot_enter = self.open_trade_snapshot.market_snapshot_enter
         trade_snapshot.market_snapshot_exit = market_snapshot_exit
-        trade_snapshot.trade_side_type = self.current_trade_side_type
+        trade_snapshot.trade_side_type = self.open_trade_snapshot.trade_side_type
         trade_snapshot.slippage = self.slippage
         trade_snapshot.commission = self.commission
         self.trade_snapshots.append(trade_snapshot)
@@ -125,7 +136,11 @@ class TradeSnapshots():
             for trade_snapshot in self.trade_snapshots:
                 f.write('{}\n'.format(trade_snapshot.to_csv_row()))
 
+    def merge(self, other):
+        assert self.slippage == other.slippage
+        assert self.commission == other.commission
+        self.trade_snapshots += other.trade_snapshots
+
     def reset(self):
         self.trade_snapshots.clear()
-        self.market_snapshot_enter = None
-        self.current_trade_side_type = None
+        self.open_trade_snapshot = None

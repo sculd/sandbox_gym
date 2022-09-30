@@ -36,6 +36,12 @@ class TradingEnvParam():
 
 class TradingEnv(gym.Env):
     metadata = {'render.modes': ['human']}
+    env_param:TradingEnvParam = None
+    action_value_neutral_position: int = 0
+    train_data: MarketData = None
+    num_position_change: int = 0
+    trade_snapshots_epoch: TradeSnapshots = None
+    trade_snapshots: TradeSnapshots = None
 
     def __init__(self, env_param: TradingEnvParam):
         super(TradingEnv, self).__init__()
@@ -59,9 +65,14 @@ class TradingEnv(gym.Env):
         self.observation_space = spaces.Box(low=-1.0, high=1.0, shape=(1 + len(self.env_param.features),), dtype=np.uint8)
 
         self.num_position_change = 0
+        self.trade_snapshots_epoch = TradeSnapshots()
+        self.trade_snapshots_epoch.slippage = self.env_param.trading_price_slippage
+        self.trade_snapshots_epoch.commission = self.env_param.trading_commission
+
         self.trade_snapshots = TradeSnapshots()
         self.trade_snapshots.slippage = self.env_param.trading_price_slippage
         self.trade_snapshots.commission = self.env_param.trading_commission
+
         self.reset()
 
     def _reward(self, action: int):
@@ -122,13 +133,13 @@ class TradingEnv(gym.Env):
         market_snapshot = self._entry_to_market_snapshot()
         # enter short
         if action == self.action_value_neutral_position - 1:
-            self.trade_snapshots.open_trade(market_snapshot, TradeSideType.SHORT)
+            self.trade_snapshots_epoch.open_trade(market_snapshot, TradeSideType.SHORT)
         # enter long
         elif action == self.action_value_neutral_position + 1:
-            self.trade_snapshots.open_trade(market_snapshot, TradeSideType.LONG)
+            self.trade_snapshots_epoch.open_trade(market_snapshot, TradeSideType.LONG)
         # exit
         else:
-            self.trade_snapshots.close_trade(market_snapshot)
+            self.trade_snapshots_epoch.close_trade(market_snapshot)
             if self.train_data.train_test_data_type == TrainTestDataType.TEST:
                 #print('num_position_change: {n}'.format(n=self.num_position_change))
                 #print(self.trade_snapshots.trade_snapshots[-1])
@@ -156,14 +167,15 @@ class TradingEnv(gym.Env):
 
         done = self.entry is None
         if done and self.train_data.train_test_data_type == TrainTestDataType.TEST:
-            self.trade_snapshots.print_summary() 
+            self.trade_snapshots_epoch.print_summary()
             print('current epoch is done. num_position_change in the epoch: {v}'.format(v=self.num_position_change))
             print('')
 
         return obs, step_reward, done, self._info()
 
     def reset(self, **kwargs):
-        self.trade_snapshots.reset()
+        self.trade_snapshots.merge(self.trade_snapshots_epoch)
+        self.trade_snapshots_epoch.reset()
         self.num_position_change = 0
         self.prev_action = self.action_value_neutral_position
         self.prev_market_symbol = ''

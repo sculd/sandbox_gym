@@ -91,6 +91,5 @@ print("Testing with validation dataset")
 env_validation.set_train_test(TrainTestDataType.TEST)
 dqn.test(env_validation, nb_episodes=200, visualize=True)
 env_validation.reset()
+env_validation.trade_snapshots.to_csv('trading_summary.csv')
 
-
-tradesnapshot = TradeSnapshots()
