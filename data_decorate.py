@@ -2,7 +2,7 @@ import pandas as pd, numpy as np
 
 df = pd.read_csv('data.csv')
 
-_move_amplitude_threshold = 0.05
+_move_amplitude_threshold = 0.10
 
 dff = df.set_index(['epochSeconds', 'market', 'symbol'])
 dfp = pd.pivot_table(df, index='epochSeconds', columns=['market', 'symbol'], values='priceAtAnalysis')
