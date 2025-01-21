@@ -1,11 +1,11 @@
 import gymnasium as gym
 
 # Initialise the environment
-env = gym.make("LunarLander-v3", render_mode="human")
+env = gym.make("LunarLander-v3", render_mode=None)
 
 import numpy as np
 from collections import deque
-import time, sys
+import time, sys, os
 import agent
 
 # Get state and action sizes
@@ -15,6 +15,9 @@ action_size = env.action_space.n
 print('State size: {}, action size: {}'.format(state_size, action_size))
 dqn_agent = agent.DQNAgent(state_size, action_size, seed=0)
 
+checkpoint_filename = f'solved_{agent.ENV_SOLVED}.pth'
+if os.path.exists(checkpoint_filename):
+    dqn_agent.load(checkpoint_filename, eval=False)
 
 start = time.time()
 scores = []
@@ -28,11 +31,11 @@ for episode in range(1, agent.MAX_EPISODES + 1):
         action = dqn_agent.act(state, eps)
         next_state, reward, done, truncated, info = env.step(action)
         dqn_agent.step(state, action, reward, next_state, done)
-        state = next_state        
-        score += reward        
+        state = next_state
+        score += reward
         if done:
             break
-            
+
         eps = max(eps * agent.EPS_DECAY, agent.EPS_MIN)
         if episode % agent.PRINT_EVERY == 0:
             mean_score = np.mean(scores_window)
@@ -41,14 +44,17 @@ for episode in range(1, agent.MAX_EPISODES + 1):
             mean_score = np.mean(scores_window)
             print('\rEnvironment solved in {} episodes, average score: {:.2f}'.format(episode, mean_score), end="")
             sys.stdout.flush()
-            dqn_agent.checkpoint(f'solved_{agent.ENV_SOLVED}.pth')
+            dqn_agent.checkpoint(checkpoint_filename)
             break
 
+    dqn_agent.monitor({"score": score, "eps": eps})
     scores_window.append(score)
     scores.append(score)
 
 end = time.time()    
 print('Took {} seconds'.format(end - start))
+
+dqn_agent.checkpoint(checkpoint_filename)
 
 env.close()
 

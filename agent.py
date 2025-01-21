@@ -6,8 +6,14 @@ import torch
 import torch.nn.functional as F
 from torch import optim
 
+import wandb
 
-MAX_EPISODES = 200  # Max number of episodes to play
+wandb.init(
+    # set the wandb project where this run will be logged
+    project="lunar_lander",
+)
+
+MAX_EPISODES = 700  # Max number of episodes to play
 MAX_STEPS = 1000     # Max steps allowed in a single episode/play
 ENV_SOLVED = 200     # MAX score at which we consider environment to be solved
 PRINT_EVERY = 10    # How often to print the progress
@@ -48,8 +54,15 @@ class DQNAgent:
         # Initiliase memory 
         self.memory = ReplayBuffer(BUFFER_SIZE, BATCH_SIZE, seed)
         self.timestep = 0
-        
-    
+
+        # wandb magic
+        wandb.watch(self.q_network, log_freq=100)
+
+
+    def monitor(self, data):
+        wandb.log(data)
+
+
     def step(self, state, action, reward, next_state, done):
         """
         Update Agent's knowledge
@@ -139,3 +152,9 @@ class DQNAgent:
         
     def checkpoint(self, filename):
         torch.save(self.q_network.state_dict(), filename)
+
+    def load(self, filename, eval=False):
+        self.q_network.load_state_dict(torch.load(filename))
+        self.update_fixed_network(self.q_network, self.fixed_network)
+        if eval:
+            self.fixed_network.eval()
