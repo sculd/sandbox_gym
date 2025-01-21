@@ -8,11 +8,6 @@ from torch import optim
 
 import wandb
 
-wandb.init(
-    # set the wandb project where this run will be logged
-    project="lunar_lander",
-)
-
 MAX_EPISODES = 1500  # Max number of episodes to play
 MAX_STEPS = 1000     # Max steps allowed in a single episode/play
 ENV_SOLVED = 400     # MAX score at which we consider environment to be solved
@@ -153,6 +148,6 @@ class DQNAgent:
     def checkpoint(self, filename):
         torch.save(self.q_network.state_dict(), filename)
 
-    def load(self, filename, eval=False):
-        self.q_network.load_state_dict(torch.load(filename))
-        self.fixed_network.load_state_dict(torch.load(filename))
+    def load(self, filename):
+        self.q_network.load_state_dict(torch.load(filename, weights_only=True))
+        self.fixed_network.load_state_dict(torch.load(filename, weights_only=True))

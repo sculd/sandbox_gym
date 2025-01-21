@@ -1,12 +1,12 @@
 import gymnasium as gym
 
 # Initialise the environment
-env = gym.make("LunarLander-v3", render_mode=None)
+env = gym.make("CartPole-v1", render_mode=None)
 
 import wandb
 wandb.init(
     # set the wandb project where this run will be logged
-    project="lunar_lander",
+    project="cart_pole",
 )
 
 import numpy as np
@@ -21,7 +21,7 @@ action_size = env.action_space.n
 print('State size: {}, action size: {}'.format(state_size, action_size))
 dqn_agent = agent.DQNAgent(state_size, action_size, seed=0)
 
-checkpoint_filename = f'lunar_lander_solved_{agent.ENV_SOLVED}.pth'
+checkpoint_filename = f'cart_pole_solved_{agent.ENV_SOLVED}.pth'
 if os.path.exists(checkpoint_filename):
     dqn_agent.load(checkpoint_filename)
 
