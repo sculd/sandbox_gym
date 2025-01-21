@@ -13,9 +13,9 @@ wandb.init(
     project="lunar_lander",
 )
 
-MAX_EPISODES = 700  # Max number of episodes to play
+MAX_EPISODES = 1500  # Max number of episodes to play
 MAX_STEPS = 1000     # Max steps allowed in a single episode/play
-ENV_SOLVED = 200     # MAX score at which we consider environment to be solved
+ENV_SOLVED = 400     # MAX score at which we consider environment to be solved
 PRINT_EVERY = 10    # How often to print the progress
 
 BUFFER_SIZE = int(1e5) # Replay memory size
@@ -148,13 +148,11 @@ class DQNAgent:
             # Back to training mode
             self.q_network.train()
             action = np.argmax(action_values.cpu().data.numpy())
-            return action    
-        
+            return action
+
     def checkpoint(self, filename):
         torch.save(self.q_network.state_dict(), filename)
 
     def load(self, filename, eval=False):
         self.q_network.load_state_dict(torch.load(filename))
-        self.update_fixed_network(self.q_network, self.fixed_network)
-        if eval:
-            self.fixed_network.eval()
+        self.fixed_network.load_state_dict(torch.load(filename))

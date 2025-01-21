@@ -19,17 +19,15 @@ checkpoint_filename = f'solved_{agent.ENV_SOLVED}.pth'
 if os.path.exists(checkpoint_filename):
     dqn_agent.load(checkpoint_filename, eval=True)
 else:
+    env.close()
     exit(0)
 
-env = gym.make("LunarLander-v3", render_mode="human")
-
-eps = 0.0
 scores_window = deque(maxlen=100)
-for episode in range(1, agent.MAX_EPISODES + 1):
+for episode in range(1, 100 + 1):
     state = env.reset()[0]
     score = 0
     for t in range(agent.MAX_STEPS):
-        action = dqn_agent.act(state, eps)
+        action = dqn_agent.act(state, eps=0.0)
         next_state, reward, done, truncated, info = env.step(action)
         state = next_state
         score += reward
