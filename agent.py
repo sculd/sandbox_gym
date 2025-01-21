@@ -28,7 +28,7 @@ EPS_MIN = 0.01       # Minimum epsilon
 device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
 class DQNAgent:
-    def __init__(self, state_size, action_size, seed):
+    def __init__(self, state_size, action_size, seed, for_training=True):
         """
         DQN Agent interacts with the environment, 
         stores the experience and learns from it
@@ -50,8 +50,9 @@ class DQNAgent:
         self.memory = ReplayBuffer(BUFFER_SIZE, BATCH_SIZE, seed)
         self.timestep = 0
 
-        # wandb magic
-        wandb.watch(self.q_network, log_freq=100)
+        if for_training:
+            # wandb magic
+            wandb.watch(self.q_network, log_freq=100)
 
 
     def monitor(self, data):

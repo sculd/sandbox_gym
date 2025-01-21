@@ -3,12 +3,6 @@ import gymnasium as gym
 # Initialise the environment
 env = gym.make("CartPole-v1", render_mode="human")
 
-import wandb
-wandb.init(
-    # set the wandb project where this run will be logged
-    project="cart_pole",
-)
-
 import numpy as np
 from collections import deque
 import os
@@ -19,7 +13,7 @@ state_size = env.observation_space.shape[0]
 action_size = env.action_space.n
 
 print('State size: {}, action size: {}'.format(state_size, action_size))
-dqn_agent = agent.DQNAgent(state_size, action_size, seed=0)
+dqn_agent = agent.DQNAgent(state_size, action_size, seed=0, for_training=False)
 
 checkpoint_filename = f'cart_pole_solved_{agent.ENV_SOLVED}.pth'
 if os.path.exists(checkpoint_filename):
