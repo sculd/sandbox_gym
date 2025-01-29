@@ -91,20 +91,15 @@ class DQNAgent:
         # Get the action with max Q value
         action_values = self.fixed_network(next_states).detach()
 
-        if type(self.action_space) is gym.spaces.Discrete:
-            # Notes
-            # tensor.max(1)[0] returns the values, tensor.max(1)[1] will return indices
-            # unsqueeze operation --> np.reshape
-            # Here, we make it from torch.Size([64]) -> torch.Size([64, 1])
-            max_action_values = action_values.max(1)[0].unsqueeze(1)        
-            
-            # If done just use reward, else update Q_target with discounted action values
-            Q_target = rewards + (GAMMA * max_action_values * (1 - dones))
-            Q_expected = self.q_network(states).gather(1, actions)
-        elif type(self.action_space) is gym.spaces.Box:
-            # If done just use reward, else update Q_target with discounted action values
-            Q_target = rewards + (GAMMA * action_values * (1 - dones))
-            Q_expected = self.q_network(states).gather(1, actions)
+        # Notes
+        # tensor.max(1)[0] returns the values, tensor.max(1)[1] will return indices
+        # unsqueeze operation --> np.reshape
+        # Here, we make it from torch.Size([64]) -> torch.Size([64, 1])
+        max_action_values = action_values.max(1)[0].unsqueeze(1)        
+        
+        # If done just use reward, else update Q_target with discounted action values
+        Q_target = rewards + (GAMMA * max_action_values * (1 - dones))
+        Q_expected = self.q_network(states).gather(1, actions)
 
         # Notes
         # tensor.max(1)[0] returns the values, tensor.max(1)[1] will return indices
@@ -161,10 +156,7 @@ class DQNAgent:
                 action_values = self.q_network(state)
             # Back to training mode
             self.q_network.train()
-            if type(self.action_space) is gym.spaces.Discrete:
-                action = np.argmax(action_values.cpu().data.numpy())
-            elif type(self.action_space) is gym.spaces.Box:
-                action = action_values.cpu()[0].detach()
+            action = np.argmax(action_values.cpu().data.numpy())
             return action
 
     def checkpoint(self, filename):
