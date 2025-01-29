@@ -3,20 +3,20 @@ import gymnasium as gym
 import numpy as np
 from collections import deque
 import os
-import agent
+import dqn.agent
 
-def test(env_name, max_episodes=100, max_steps=agent.MAX_STEPS):
+def test(env_name, env_args={}, max_episodes=100, max_steps=dqn.agent.MAX_STEPS):
     # Initialise the environment
-    env = gym.make(env_name, render_mode="human")
+    env = gym.make(env_name, **env_args, render_mode="human")
 
     # Get state and action sizes
     state_size = env.observation_space.shape[0]
     action_size = env.action_space.n
 
     print('State size: {}, action size: {}'.format(state_size, action_size))
-    dqn_agent = agent.DQNAgent(state_size, action_size, seed=0, for_training=False)
+    dqn_agent = dqn.agent.DQNAgent(state_size, action_size, seed=0, for_training=False)
 
-    checkpoint_filename = f'{env_name}_solved_{agent.ENV_SOLVED}.pth'
+    checkpoint_filename = f'{env_name}_solved_{dqn.agent.ENV_SOLVED}.pth'
     if os.path.exists(checkpoint_filename):
         dqn_agent.load(checkpoint_filename)
     else:
@@ -41,9 +41,9 @@ def test(env_name, max_episodes=100, max_steps=agent.MAX_STEPS):
 
     env.close()
 
-#test("LunarLander-v3")
-#test("CartPole-v1")
-test("Acrobot-v1", max_steps=2000)
+test("LunarLander-v3")
+#test("CartPole-v1", max_steps=200)
+#test("Acrobot-v1", max_steps=2000)
 
 
 

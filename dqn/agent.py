@@ -1,10 +1,11 @@
-from qnetwork import QNetwork
-from replay_buffer import ReplayBuffer
+from dqn.qnetwork import QNetwork
+from dqn.replay_buffer import ReplayBuffer
 import random
 import numpy as np
 import torch
 import torch.nn.functional as F
 from torch import optim
+import gymnasium as gym
 
 import wandb
 
@@ -28,7 +29,7 @@ EPS_MIN = 0.01       # Minimum epsilon
 device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
 class DQNAgent:
-    def __init__(self, state_size, action_size, seed, for_training=True):
+    def __init__(self, state_size, action_space, seed, for_training=True):
         """
         DQN Agent interacts with the environment, 
         stores the experience and learns from it
@@ -40,11 +41,11 @@ class DQNAgent:
         seed (int): random seed
         """
         self.state_size = state_size
-        self.action_size = action_size
+        self.action_space = action_space
         self.seed = random.seed(seed)
         # Initialize Q and Fixed Q networks
-        self.q_network = QNetwork(state_size, action_size, seed).to(device)
-        self.fixed_network = QNetwork(state_size, action_size, seed).to(device)
+        self.q_network = QNetwork(state_size, action_space, seed).to(device)
+        self.fixed_network = QNetwork(state_size, action_space, seed).to(device)
         self.optimizer = optim.Adam(self.q_network.parameters())
         # Initiliase memory 
         self.memory = ReplayBuffer(BUFFER_SIZE, BATCH_SIZE, seed)
@@ -77,7 +78,7 @@ class DQNAgent:
             if len(self.memory) > BATCH_SIZE:
                 sampled_experiences = self.memory.sample()
                 self.learn(sampled_experiences)
-        
+    
     def learn(self, experiences):
         """
         Learn from experience by training the q_network 
@@ -89,11 +90,27 @@ class DQNAgent:
         states, actions, rewards, next_states, dones = experiences
         # Get the action with max Q value
         action_values = self.fixed_network(next_states).detach()
+
+        if type(self.action_space) is gym.spaces.Discrete:
+            # Notes
+            # tensor.max(1)[0] returns the values, tensor.max(1)[1] will return indices
+            # unsqueeze operation --> np.reshape
+            # Here, we make it from torch.Size([64]) -> torch.Size([64, 1])
+            max_action_values = action_values.max(1)[0].unsqueeze(1)        
+            
+            # If done just use reward, else update Q_target with discounted action values
+            Q_target = rewards + (GAMMA * max_action_values * (1 - dones))
+            Q_expected = self.q_network(states).gather(1, actions)
+        elif type(self.action_space) is gym.spaces.Box:
+            # If done just use reward, else update Q_target with discounted action values
+            Q_target = rewards + (GAMMA * action_values * (1 - dones))
+            Q_expected = self.q_network(states).gather(1, actions)
+
         # Notes
         # tensor.max(1)[0] returns the values, tensor.max(1)[1] will return indices
         # unsqueeze operation --> np.reshape
         # Here, we make it from torch.Size([64]) -> torch.Size([64, 1])
-        max_action_values = action_values.max(1)[0].unsqueeze(1)
+        max_action_values = action_values.max(1)[0].unsqueeze(1)        
         
         # If done just use reward, else update Q_target with discounted action values
         Q_target = rewards + (GAMMA * max_action_values * (1 - dones))
@@ -134,7 +151,8 @@ class DQNAgent:
         """
         rnd = random.random()
         if rnd < eps:
-            return np.random.randint(self.action_size)
+            #return np.random.randint(self.action_size)
+            return torch.from_numpy(self.action_space.sample())
         else:
             state = torch.from_numpy(state).float().unsqueeze(0).to(device)
             # set the network into evaluation mode 
@@ -143,7 +161,10 @@ class DQNAgent:
                 action_values = self.q_network(state)
             # Back to training mode
             self.q_network.train()
-            action = np.argmax(action_values.cpu().data.numpy())
+            if type(self.action_space) is gym.spaces.Discrete:
+                action = np.argmax(action_values.cpu().data.numpy())
+            elif type(self.action_space) is gym.spaces.Box:
+                action = action_values.cpu()[0].detach()
             return action
 
     def checkpoint(self, filename):

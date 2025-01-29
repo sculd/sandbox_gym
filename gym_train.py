@@ -4,11 +4,11 @@ import wandb
 import numpy as np
 from collections import deque
 import time, sys, os
-import agent
+import dqn.agent
 
-def train(env_name, max_episodes=agent.MAX_EPISODES, max_steps=agent.MAX_STEPS):
+def train(env_name, env_args={}, max_episodes=dqn.agent.MAX_EPISODES, max_steps=dqn.agent.MAX_STEPS):
     # Initialise the environment
-    env = gym.make(env_name, render_mode=None)
+    env = gym.make(env_name, **env_args, render_mode=None)
 
     wandb.init(
         # set the wandb project where this run will be logged
@@ -17,12 +17,11 @@ def train(env_name, max_episodes=agent.MAX_EPISODES, max_steps=agent.MAX_STEPS):
 
     # Get state and action sizes
     state_size = env.observation_space.shape[0]
-    action_size = env.action_space.n
 
-    print('State size: {}, action size: {}'.format(state_size, action_size))
-    dqn_agent = agent.DQNAgent(state_size, action_size, seed=0)
+    print(f'{state_size=}, {env.action_space=}')
+    dqn_agent = dqn.agent.DQNAgent(state_size, env.action_space, seed=0)
 
-    checkpoint_filename = f'{env_name}_solved_{agent.ENV_SOLVED}.pth'
+    checkpoint_filename = f'{env_name}_solved_{dqn.agent.ENV_SOLVED}.pth'
     if os.path.exists(checkpoint_filename):
         dqn_agent.load(checkpoint_filename)
 
@@ -30,7 +29,7 @@ def train(env_name, max_episodes=agent.MAX_EPISODES, max_steps=agent.MAX_STEPS):
     scores = []
     # Maintain a list of last 100 scores
     scores_window = deque(maxlen=100)
-    eps = agent.EPS_START
+    eps = dqn.agent.EPS_START
     for episode in range(1, max_episodes + 1):
         state = env.reset()[0]
         score = 0
@@ -43,8 +42,8 @@ def train(env_name, max_episodes=agent.MAX_EPISODES, max_steps=agent.MAX_STEPS):
             if done:
                 break
 
-            eps = max(eps * agent.EPS_DECAY, agent.EPS_MIN)
-            if episode % agent.PRINT_EVERY == 0:
+            eps = max(eps * dqn.agent.EPS_DECAY, dqn.agent.EPS_MIN)
+            if episode % dqn.agent.PRINT_EVERY == 0:
                 mean_score = np.mean(scores_window)
                 print('\r Progress {}/{}, average score:{:.2f}'.format(episode, max_episodes, mean_score), end="")
             if score >= 1000:
@@ -66,7 +65,7 @@ def train(env_name, max_episodes=agent.MAX_EPISODES, max_steps=agent.MAX_STEPS):
     env.close()
 
 
+#train(""LunarLander-v3"")
 #train("CartPole-v1")
-train("Acrobot-v1", max_steps=2000)
-
-
+#train("Acrobot-v1", max_steps=2000)
+train("BipedalWalker-v3", env_args={"hardcore": True})
