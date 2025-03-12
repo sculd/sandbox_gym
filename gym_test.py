@@ -24,7 +24,7 @@ def test(env_name, env_args={}, max_episodes=100, max_steps=dqn.agent.MAX_STEPS)
 
     scores_window = deque(maxlen=100)
     for episode in range(1, max_episodes + 1):
-        state = env.reset()[0]
+        state, _ = env.reset()
         score = 0
         for t in range(max_steps):
             action = dqn_agent.act(state, eps=0.0)

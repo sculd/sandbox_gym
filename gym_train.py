@@ -65,7 +65,6 @@ def train(env_name, env_args={}, max_episodes=dqn.agent.MAX_EPISODES, max_steps=
     env.close()
 
 
-#train(""LunarLander-v3"")
+train("LunarLander-v3", env_args={"enable_wind": True, "wind_power": 15.0, "turbulence_power": 1.5})
 #train("CartPole-v1")
 #train("Acrobot-v1", max_steps=2000)
-train("BipedalWalker-v3", env_args={"hardcore": True})
